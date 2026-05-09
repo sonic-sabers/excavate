@@ -23,7 +23,8 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "removeComments": false,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]

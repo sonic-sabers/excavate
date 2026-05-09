@@ -1,8 +1,8 @@
-# excavate
+# Excavate
 
 **Dig up what is buried in your codebase.**
 
-Every codebase has files nobody wants to touch. The ones where a small bug fix turns into a week of archaeology. The ones that keep showing up in post-mortems. excavate finds them — in seconds, with no setup.
+Every codebase has files nobody wants to touch. The ones where a small bug fix turns into a week of archaeology. The ones that keep showing up in post-mortems. Excavate finds them — in seconds, with no setup.
 
 ```bash
 npx excavate
@@ -16,7 +16,7 @@ npx excavate
 
 ```
   ████
-  ███          excavate v0.1.0
+  ███          Excavate v0.1.0
   ██
   █            your codebase, laid bare
 
@@ -38,7 +38,7 @@ npx excavate
   ─────────────────────────────────────────────
 ```
 
-Each file gets a debt score from 0–100. The scoring uses geological language — because debt accumulates in layers, oldest and most compressed at the bottom.
+Each file gets a debt score from 0–100. Excavate uses geological language — because debt accumulates in layers, oldest and most compressed at the bottom.
 
 | Level       | Score  | What it means                      |
 | ----------- | ------ | ---------------------------------- |
@@ -51,7 +51,7 @@ Each file gets a debt score from 0–100. The scoring uses geological language �
 
 ## How the score is calculated
 
-excavate combines six signals into a single weighted score per file:
+Excavate combines six signals into a single weighted score per file:
 
 | Signal       | Weight | What it's measuring                                  |
 | ------------ | ------ | ---------------------------------------------------- |
@@ -100,7 +100,7 @@ npx excavate --since 30
 
 ## The HTML report
 
-Pass `--report` to get a self-contained HTML file you can share with your team or management — no server, no external deps, just open it in a browser.
+Pass `--report` to get a self-contained HTML file you can share with your team or management — no server, no external deps, just open it in a browser. Excavate bundles everything inline.
 
 It includes:
 
@@ -136,7 +136,7 @@ Exits with code `1` if the average score across all files exceeds the threshold.
 
 ## Configuration
 
-excavate works out of the box with zero config. When you're ready to tune it, drop a `.excavaterc` in your repo root (or add an `excavate` key to `package.json`):
+Excavate works out of the box with zero config. When you're ready to tune it, drop a `.excavaterc` in your repo root (or add an `excavate` key to `package.json`):
 
 ```json
 {
@@ -208,7 +208,7 @@ console.log(result.files.filter((f) => f.level === "bedrock"));
 ## FAQ
 
 **Does it need any setup?**
-No. `npx excavate` works on any git repo with JS or TS files. Coverage signal is optional — if no coverage report is found, that signal is skipped and weights are redistributed automatically.
+No. Excavate works on any git repo with JS or TS files — just run `npx excavate`. Coverage signal is optional — if no coverage report is found, that signal is skipped and weights are redistributed automatically.
 
 **Does it send any data anywhere?**
 No. Everything runs locally. The only network call is `npm audit` for CVE data, which goes to the npm registry — the same call `npm audit` makes normally.
@@ -217,7 +217,7 @@ No. Everything runs locally. The only network call is `npm audit` for CVE data, 
 Pass the path to the sub-package: `npx excavate packages/api`.
 
 **Can I use it with Vitest / Jest / c8?**
-Yes — as long as your test runner outputs a `coverage/coverage-summary.json` or `lcov.info`, excavate will pick it up automatically.
+Yes — as long as your test runner outputs a `coverage/coverage-summary.json` or `lcov.info`, Excavate will pick it up automatically.
 
 ---
 
