@@ -34,7 +34,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "excavate": "./dist/cli.js"
+    "excavate": "dist/cli.js"
   },
   "files": [
     "dist",
