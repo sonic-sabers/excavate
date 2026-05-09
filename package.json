@@ -23,7 +23,7 @@
     "url": "git+https://github.com/sonic-sabers/excavate.git"
   },
   "license": "MIT",
-  "author": "",
+  "author": "Ashish Dev <its.ashishdev@gmail.com>",
   "type": "module",
   "exports": {
     ".": {
@@ -38,12 +38,11 @@
   },
   "files": [
     "dist",
-    "templates",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc --project tsconfig.build.json",
+    "build": "tsc --project tsconfig.build.json && chmod +x dist/cli.js",
     "dev": "tsx watch src/cli.ts",
     "start": "tsx src/cli.ts",
     "lint": "tsc --noEmit",
@@ -64,7 +63,6 @@
     "simple-git": "^3.36.0"
   },
   "devDependencies": {
-    "@types/glob": "^9.0.0",
     "@types/handlebars": "^4.1.0",
     "@types/madge": "^5.0.3",
     "@types/node": "^25.6.2",
@@ -107,6 +105,7 @@
       "terminal"
     ],
     "reportDir": "./excavate-report",
-    "failAbove": null
+    "failAbove": null,
+    "gitDays": 90
   }
 }
