@@ -1,0 +1,13 @@
+node_modules/
+dist/
+excavate-report/
+*.js.map
+.DS_Store
+*.tsbuildinfo
+.env
+.agents/
+.claude/
+.gstack/
+.windsurf/
+AGENTS.md
+CLAUDE.md

@@ -1,0 +1,112 @@
+{
+  "name": "excavate",
+  "version": "0.1.0",
+  "description": "Dig up what is buried in your codebase.",
+  "keywords": [
+    "technical-debt",
+    "code-quality",
+    "heatmap",
+    "cli",
+    "static-analysis",
+    "git",
+    "developer-tools",
+    "complexity",
+    "churn",
+    "coverage"
+  ],
+  "homepage": "https://github.com/sonic-sabers/excavate#readme",
+  "bugs": {
+    "url": "https://github.com/sonic-sabers/excavate/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sonic-sabers/excavate.git"
+  },
+  "license": "MIT",
+  "author": "",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "excavate": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "dev": "tsx watch src/cli.ts",
+    "start": "tsx src/cli.ts",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.29.3",
+    "@typescript-eslint/parser": "^8.59.2",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.3",
+    "cosmiconfig": "^9.0.1",
+    "dependency-cruiser": "^17.4.0",
+    "glob": "^13.0.6",
+    "handlebars": "^4.7.9",
+    "madge": "^8.0.0",
+    "ora": "^9.4.0",
+    "simple-git": "^3.36.0"
+  },
+  "devDependencies": {
+    "@types/glob": "^9.0.0",
+    "@types/handlebars": "^4.1.0",
+    "@types/madge": "^5.0.3",
+    "@types/node": "^25.6.2",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "excavate": {
+    "include": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/**/*.js",
+      "src/**/*.jsx"
+    ],
+    "exclude": [
+      "**/*.test.ts",
+      "**/*.spec.ts",
+      "**/*.test.js",
+      "**/*.spec.js",
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/.git/**"
+    ],
+    "weights": {
+      "churn": 0.25,
+      "coverage": 0.25,
+      "complexity": 0.2,
+      "knowledge": 0.15,
+      "docs": 0.1,
+      "deps": 0.05
+    },
+    "thresholds": {
+      "bedrock": 70,
+      "deep": 40,
+      "surface": 20
+    },
+    "output": [
+      "terminal"
+    ],
+    "reportDir": "./excavate-report",
+    "failAbove": null
+  }
+}

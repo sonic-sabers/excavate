@@ -1,0 +1,8 @@
+Use SOLID, YAGNI and DRY principles for software coding
+Never write a file more than 300 lines. If there are files required split into multiple functions.
+Do not write documentattion for everything. create only for the ones that is needed.
+Use caveman lite communication by default: concise, low-filler, but still clear/professional.
+Use full/ultra caveman only when explicitly requested.
+
+Backend Instrcutions:
+All api related utils and function should be placed in utls/api

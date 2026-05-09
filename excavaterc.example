@@ -1,0 +1,30 @@
+{
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.js",
+    "src/**/*.jsx"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/node_modules/**",
+    "**/dist/**"
+  ],
+  "weights": {
+    "churn": 0.25,
+    "coverage": 0.25,
+    "complexity": 0.20,
+    "knowledge": 0.15,
+    "docs": 0.10,
+    "deps": 0.05
+  },
+  "thresholds": {
+    "bedrock": 70,
+    "deep": 40,
+    "surface": 20
+  },
+  "output": ["terminal", "html", "json"],
+  "reportDir": "./excavate-report",
+  "failAbove": 70
+}
