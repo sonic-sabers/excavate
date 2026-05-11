@@ -10,7 +10,7 @@ npx excavate
 
 > Requires Node.js ≥ 18 and a git repository.
 
-![excavate demo](assets/demo.gif)
+<!-- ![excavate demo](assets/demo.gif) -->
 
 ---
 
