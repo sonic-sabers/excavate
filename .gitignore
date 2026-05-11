@@ -5,9 +5,11 @@ excavate-report/
 .DS_Store
 *.tsbuildinfo
 .env
+
 .agents/
 .claude/
 .gstack/
 .windsurf/
+docs/
 AGENTS.md
 CLAUDE.md

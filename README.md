@@ -205,6 +205,40 @@ console.log(result.files.filter((f) => f.level === "bedrock"));
 
 ---
 
+## Why not just ask an LLM to review your code?
+
+You can. But there are four things an LLM cannot do:
+
+**1. It can't read your git history.**
+Debt isn't just in how code looks — it's in how it *behaves over time*. A file that's been touched 60 times in 90 days by a single author is a risk that no static snapshot reveals. LLMs see one commit. Excavate sees the whole dig site.
+
+**2. It can't tell you where to look first.**
+Ask an LLM to "find the worst file in this repo" and it'll pick something that looks messy. Excavate ranks by a weighted signal model — churn, coverage gap, complexity, bus factor, circular deps, and SATD — built on the same empirical research that Code Maat and DebtViz are based on. The worst-looking file is rarely the highest-risk file.
+
+**3. It can't fit your repo in context.**
+A 50,000-line codebase won't fit in any context window. Summaries lose the signal. Excavate runs locally against the full repo — every file, every commit in the window, every import graph — and collapses it into a ranked list in seconds.
+
+**4. It produces no artefact you can act on.**
+An LLM gives you a paragraph. Excavate gives you a score per file, a sortable table, a D3 treemap you can share with your manager, and a `--fail-above` CI gate that enforces debt thresholds on every PR. The insight becomes process.
+
+Use LLMs to fix the files Excavate surfaces. Use Excavate to find them.
+
+---
+
+## Why not SonarQube, Code Climate, or Plato?
+
+| Tool | The gap |
+| --- | --- |
+| **SonarQube** | Requires a Java server, a running instance, and admin setup. Zero-config it is not. |
+| **Code Climate** | SaaS. Your code leaves your network. Pricing starts at $10/seat. |
+| **Plato** | JS-only, CJS, unmaintained since 2018. No git signals, no coverage integration. |
+| **ESLint** | Lints syntax and style. Has no model of time, history, or who knows the code. |
+| **npm audit** | CVEs only. One signal out of six. |
+
+Excavate is the only tool that combines **git history + AST complexity + coverage gaps + bus factor + circular deps + SATD** into a single ranked score, runs in one `npx` command with no server or account, and produces a report your manager can open in a browser.
+
+---
+
 ## FAQ
 
 **Does it need any setup?**
@@ -218,6 +252,21 @@ Pass the path to the sub-package: `npx excavate packages/api`.
 
 **Can I use it with Vitest / Jest / c8?**
 Yes — as long as your test runner outputs a `coverage/coverage-summary.json` or `lcov.info`, Excavate will pick it up automatically.
+
+---
+
+## Using excavate with AI assistants
+
+A machine-readable summary of excavate's API, CLI flags, output schema, and configuration is available at [`llms.txt`](llms.txt) — following the [llms.txt convention](https://llmstxt.org). AI assistants and coding tools can fetch this file to use excavate correctly without hallucinating flags or types.
+
+```
+npx excavate llms.txt   # not a real command — fetch from GitHub raw or npm package
+```
+
+Direct URL (raw):
+```
+https://raw.githubusercontent.com/sonic-sabers/excavate/main/llms.txt
+```
 
 ---
 

@@ -12,7 +12,12 @@
     "developer-tools",
     "complexity",
     "churn",
-    "coverage"
+    "coverage",
+    "debt-score",
+    "cyclomatic-complexity",
+    "bus-factor",
+    "npx",
+    "zero-config"
   ],
   "homepage": "https://github.com/sonic-sabers/excavate#readme",
   "bugs": {
@@ -39,7 +44,8 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "llms.txt"
   ],
   "scripts": {
     "build": "tsc --project tsconfig.build.json && chmod +x dist/cli.js",

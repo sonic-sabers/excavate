@@ -1,0 +1,148 @@
+# excavate
+
+> Zero-config CLI that scans any JS/TS codebase and generates a technical debt heatmap. Run `npx excavate` — get a scored, ranked breakdown of which files carry the most accumulated debt.
+
+## What it does
+
+excavate combines six signals per file into a single weighted debt score (0–100):
+
+- **churn** (25%) — commit frequency in last N days (high churn = instability)
+- **coverage** (25%) — test coverage gap (untested = high risk)
+- **complexity** (20%) — cyclomatic complexity via AST walk
+- **knowledge** (15%) — bus factor risk (1 author ever = score 100)
+- **docs** (10%) — comment density + TODO/FIXME/HACK count
+- **deps** (5%) — circular deps + stale packages + CVEs
+
+Scores map to geological debt levels: **bedrock** (70–100), **deep** (40–70), **surface** (20–40), **clear** (0–20).
+
+## Quick start
+
+```bash
+npx excavate                    # scan current directory
+npx excavate /path/to/repo      # scan any JS/TS git repo
+npx excavate --report           # terminal + shareable HTML treemap
+npx excavate --fail-above 70    # CI gate — exit 1 if avg score > 70
+npx excavate --top 10           # show only 10 worst files
+npx excavate --since 30         # use last 30 days of git history
+npx excavate --json             # machine-readable JSON output
+```
+
+Requirements: Node.js >= 18, git repository.
+
+## Programmatic API
+
+```typescript
+import { scan } from "excavate";
+
+const result = await scan("/path/to/repo", {
+  output: [],         // suppress terminal output
+  failAbove: null,
+});
+
+// result.summary.avgScore        — number 0–100
+// result.summary.bedrock         — file count at bedrock level
+// result.files                   — FileDebtResult[] sorted by score desc
+// result.files[0].path           — relative file path
+// result.files[0].score          — 0–100
+// result.files[0].level          — 'bedrock' | 'deep' | 'surface' | 'clear'
+// result.files[0].signals.churn  — 0–100 normalised signal
+// result.files[0].meta.authors   — string[] of git authors
+```
+
+## Configuration
+
+Drop `.excavaterc` in repo root or add `excavate` key to `package.json`:
+
+```json
+{
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["**/*.test.ts", "**/node_modules/**"],
+  "weights": { "churn": 0.25, "coverage": 0.25, "complexity": 0.20, "knowledge": 0.15, "docs": 0.10, "deps": 0.05 },
+  "thresholds": { "bedrock": 70, "deep": 40, "surface": 20 },
+  "output": ["terminal"],
+  "reportDir": "./excavate-report",
+  "failAbove": null,
+  "gitDays": 90
+}
+```
+
+Weights must sum to 1.0.
+
+## CLI reference
+
+```
+excavate [path] [options]
+
+Arguments:
+  path                    Repo to scan (default: current directory)
+
+Options:
+  -o, --output <formats>  terminal,html,json (comma-separated)
+  -r, --report            Shorthand for --output terminal,html
+  --report-dir <dir>      Output directory (default: ./excavate-report)
+  --fail-above <score>    Exit 1 if avg score exceeds threshold
+  --config <path>         Config file path (default: auto-discover)
+  --no-color              Disable terminal colours
+  --json                  Shorthand for --output json
+  --top <n>               Show only top N worst files
+  --since <days>          Git history window in days (default: 90)
+  -v, --version           Show version
+  -h, --help              Show help
+```
+
+## Output types
+
+- **terminal** — chalk-coloured ranked file list with signal arrows
+- **html** — self-contained D3 treemap (no server, open in browser, shareable)
+- **json** — full ScanResult object, machine-readable
+
+## JSON output shape
+
+```typescript
+interface ScanResult {
+  repoRoot: string
+  scannedAt: Date
+  filesScanned: number
+  durationMs: number
+  summary: {
+    avgScore: number
+    bedrock: number        // file count
+    deep: number
+    surface: number
+    clear: number
+    estimatedHours: number // bedrock × 10h estimate
+  }
+  files: FileDebtResult[]
+}
+
+interface FileDebtResult {
+  path: string             // relative to repo root
+  score: number            // 0–100
+  level: 'bedrock' | 'deep' | 'surface' | 'clear'
+  signals: {
+    churn: number          // 0–100 normalised
+    coverage: number       // 0–100 (coverage gap, not %)
+    complexity: number     // 0–100 normalised
+    knowledge: number      // 0–100 bus factor risk
+    docs: number           // 0–100 doc/SATD score
+    deps: number           // 0–100 deps risk
+  }
+  meta: {
+    lastModified: Date
+    authors: string[]
+    commitCount: number    // commits in last gitDays days
+    testCoverage: number   // 0–100 actual coverage %
+    linesOfCode: number
+    satdCount: number      // TODO/FIXME/HACK hits
+    circularDeps: number   // circular dep chains involving file
+    fanIn: number          // files that import this file
+  }
+}
+```
+
+## Links
+
+- npm: https://www.npmjs.com/package/excavate
+- GitHub: https://github.com/sonic-sabers/excavate
+- Issues: https://github.com/sonic-sabers/excavate/issues
+- License: MIT
