@@ -60,6 +60,8 @@ export interface ExcavateConfig {
   reportDir: string
   failAbove: number | null
   gitDays: number
+  history: boolean
+  historyLimit: number
 }
 
 export const DEFAULT_CONFIG: ExcavateConfig = {
@@ -88,4 +90,6 @@ export const DEFAULT_CONFIG: ExcavateConfig = {
   reportDir: './excavate-report',
   failAbove: null,
   gitDays: 90,
+  history: true,
+  historyLimit: 5,
 }

@@ -7,6 +7,7 @@ import { createRequire } from 'module'
 import { loadConfig } from './scorer/weights.js'
 import { scan } from './scanner/index.js'
 import { printLogo, printResults } from './output/terminal.js'
+import { saveSnapshot, loadBase, loadHistory } from './history.js'
 import type { ScanResult } from './types.js'
 
 const require = createRequire(import.meta.url)
@@ -70,24 +71,35 @@ program
     const result = await scan(repoRoot, config)
     spinner.stop()
 
+    // History: save snapshot, load base + full history for outputs
+    let base: ScanResult | null = null
+    let history: ScanResult[] = []
+    if (config.history) {
+      try {
+        await saveSnapshot(result, config.reportDir, config.historyLimit)
+        base    = await loadBase(config.reportDir)
+        history = await loadHistory(config.reportDir)
+      } catch {
+        console.warn('  warning: could not save scan history')
+      }
+    }
+
     const top = opts.top ? parseInt(opts.top, 10) : undefined
 
     if (config.output.includes('terminal')) {
-      printResults(result, top)
+      printResults(result, top, base)
     }
 
     if (config.output.includes('html')) {
       const { writeHtmlReport } = await import('./output/htmlReport.js')
-      const outPath = await writeHtmlReport(result, config.reportDir)
+      const outPath = await writeHtmlReport(result, config.reportDir, history)
       console.log(`HTML report → ${outPath}`)
     }
 
     if (config.output.includes('json')) {
       if (opts.json) {
-        // --json shorthand: stdout only, for piping
         console.log(JSON.stringify(result, null, 2))
       } else {
-        // --output json or --output terminal,json: write to file
         const { writeJsonOutput } = await import('./output/jsonOutput.js')
         const outPath = await writeJsonOutput(result, config.reportDir)
         console.log(`JSON report → ${outPath}`)

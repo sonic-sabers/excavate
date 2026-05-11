@@ -110,6 +110,8 @@ It includes:
 - **Click any file** to see its full signal breakdown with plain-English explanations
 - A **sortable table** of every scanned file
 - Summary counts and an estimated cleanup hours figure
+- A **debt trend chart** showing avg score over time (appears after 2+ scans)
+- A **comparison toggle** — switch between Latest, vs Base (first-ever scan), and vs Last (previous scan) to see which files improved or worsened
 
 ```bash
 npx excavate --report
@@ -118,23 +120,33 @@ open excavate-report/index.html
 
 ---
 
-## Comparing scans (trend delta)
+## Trend tracking (automatic)
 
-Save a baseline, make changes, compare:
+Every scan automatically saves a snapshot to `excavate-report/history/`. The first scan becomes your permanent base. Subsequent scans show a delta vs that base in the terminal:
+
+```
+  baseline → today    52 → 46   avg delta  −6  ✓
+```
+
+The HTML report (`--report`) shows a trend line chart and a toggle to compare files vs base or vs the previous scan.
+
+History is kept at **5 snapshots by default** (base always preserved + last 4). Configure with `historyLimit`. Disable entirely with `history: false` (useful in CI where `reportDir` is ephemeral).
+
+## Comparing scans (manual diff)
+
+For ad-hoc comparison between any two saved JSON reports:
 
 ```bash
-# Save baseline
 excavate . --output json
 cp excavate-report/excavate-report.json baseline.json
 
 # ... make code changes ...
 
-# Compare
 excavate . --output json
 excavate diff baseline.json excavate-report/excavate-report.json
 ```
 
-Output shows which files got better or worse, with colour-coded deltas. Use it in CI: save a baseline on `main`, compare on every PR branch.
+Output shows which files got better or worse, with colour-coded deltas.
 
 ---
 
@@ -206,7 +218,9 @@ Excavate works out of the box with zero config. When you're ready to tune it, dr
   },
   "output": ["terminal", "html"],
   "reportDir": "./excavate-report",
-  "failAbove": null
+  "failAbove": null,
+  "history": true,
+  "historyLimit": 5
 }
 ```
 

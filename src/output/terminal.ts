@@ -44,7 +44,7 @@ export function printLogo(version: string): void {
   console.log()
 }
 
-export function printResults(result: ScanResult, top?: number): void {
+export function printResults(result: ScanResult, top?: number, base?: ScanResult | null): void {
   const files = top ? result.files.slice(0, top) : result.files
 
   const maxPathLen = Math.min(
@@ -85,5 +85,28 @@ export function printResults(result: ScanResult, top?: number): void {
     `  avg score       ${String(summary.avgScore).padStart(5)}     est. cleanup  ${hrs}`,
   )
   console.log(div)
+
+  // Delta line
+  const isFirstScan = base == null
+
+  if (isFirstScan) {
+    console.log(`  ${chalk.dim('no baseline yet — this scan is your base')}`)
+  } else {
+    const baseScore = base!.summary.avgScore
+    const nowScore  = result.summary.avgScore
+    const delta     = nowScore - baseScore
+    const sign      = delta > 0 ? '+' : ''
+    const deltaStr  = `${sign}${delta}`
+    const indicator = delta < 0 ? ' ✓' : delta > 0 ? ' ✗' : ''
+    const deltaColored = delta < 0
+      ? chalk.green(deltaStr + indicator)
+      : delta > 0
+        ? chalk.red(deltaStr + indicator)
+        : chalk.gray(deltaStr)
+    console.log(
+      `  ${chalk.dim('baseline → today')}    ${baseScore} → ${nowScore}   avg delta  ${deltaColored}`,
+    )
+  }
+
   console.log()
 }

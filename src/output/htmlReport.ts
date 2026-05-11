@@ -13,23 +13,29 @@ function avgLevel(score: number): string {
   return 'clear'
 }
 
-export async function writeHtmlReport(result: ScanResult, reportDir: string): Promise<string> {
+export async function writeHtmlReport(
+  result: ScanResult,
+  reportDir: string,
+  history: ScanResult[] = [],
+): Promise<string> {
   await mkdir(reportDir, { recursive: true })
 
   const templatePath = path.resolve(__dirname, '../../templates/report.hbs')
   const templateSrc = await readFile(templatePath, 'utf8')
   const template = Handlebars.compile(templateSrc)
 
+  const escape = (s: string) => s.replace(/<\/script>/gi, '<\\/script>')
+
   const html = template({
     repoName: path.basename(result.repoRoot),
-    scannedAt: result.scannedAt.toLocaleString(),
+    scannedAt: new Date(result.scannedAt).toLocaleString(),
     filesScanned: result.filesScanned,
     durationMs: result.durationMs,
     avgScore: result.summary.avgScore,
     avgLevel: avgLevel(result.summary.avgScore),
     summary: result.summary,
-    // Escape </script> so injected JSON can't break out of the script block
-    dataJson: JSON.stringify(result).replace(/<\/script>/gi, '<\\/script>'),
+    dataJson:    escape(JSON.stringify(result)),
+    historyJson: escape(JSON.stringify(history)),
   })
 
   const outPath = path.join(reportDir, 'index.html')
