@@ -63,8 +63,24 @@ export interface ExcavateConfig {
 }
 
 export const DEFAULT_CONFIG: ExcavateConfig = {
-  include: ['src/**/*.ts', 'src/**/*.tsx', 'src/**/*.js', 'src/**/*.jsx'],
-  exclude: ['**/*.test.ts', '**/*.spec.ts', '**/node_modules/**', '**/dist/**'],
+  include: [
+    'src/**/*.{ts,tsx,js,jsx}',
+    'app/**/*.{ts,tsx,js,jsx}',
+    'pages/**/*.{ts,tsx,js,jsx}',
+    'components/**/*.{ts,tsx,js,jsx}',
+    'lib/**/*.{ts,tsx,js,jsx}',
+    'utils/**/*.{ts,tsx,js,jsx}',
+    'hooks/**/*.{ts,tsx,js,jsx}',
+  ],
+  exclude: [
+    '**/*.test.{ts,tsx,js,jsx}',
+    '**/*.spec.{ts,tsx,js,jsx}',
+    '**/node_modules/**',
+    '**/dist/**',
+    '**/.next/**',
+    '**/build/**',
+    '**/coverage/**',
+  ],
   weights: { churn: 0.25, coverage: 0.25, complexity: 0.20, knowledge: 0.15, docs: 0.10, deps: 0.05 },
   thresholds: { bedrock: 70, deep: 40, surface: 20 },
   output: ['terminal'],

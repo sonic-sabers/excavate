@@ -37,50 +37,56 @@ export async function scan(repoRoot: string, config: ExcavateConfig): Promise<Sc
     }
   }
 
-  const results = await Promise.all(
-    files.map(async (filePath): Promise<FileDebtResult> => {
-      const [git, ast, doc] = await Promise.all([
-        scanGit(filePath, repoRoot, config),
-        scanAst(filePath, repoRoot),
-        scanDoc(filePath, repoRoot, config),
-      ])
+  const BATCH = 10
+  const results: FileDebtResult[] = []
+  for (let i = 0; i < files.length; i += BATCH) {
+    const batch = files.slice(i, i + BATCH)
+    const batchResults = await Promise.all(
+      batch.map(async (filePath): Promise<FileDebtResult> => {
+        const [git, ast, doc] = await Promise.all([
+          scanGit(filePath, repoRoot, config),
+          scanAst(filePath, repoRoot),
+          scanDoc(filePath, repoRoot, config),
+        ])
 
-      const depResult = depMap.get(filePath)
-      const depsScore = depResult !== undefined ? depResult.depsScore : repoDepBase
-      const fanIn = depResult?.fanIn ?? 0
-      const circularDeps = depResult?.circularDeps ?? 0
-      const coverageScore = getCoverageScore(filePath, coverageMap)
+        const depResult = depMap.get(filePath)
+        const depsScore = depResult !== undefined ? depResult.depsScore : repoDepBase
+        const fanIn = depResult?.fanIn ?? 0
+        const circularDeps = depResult?.circularDeps ?? 0
+        const coverageScore = getCoverageScore(filePath, coverageMap)
 
-      const signals: FileDebtResult['signals'] = {
-        churn: git.churnScore,
-        coverage: coverageScore,
-        complexity: ast.complexityScore,
-        knowledge: git.knowledgeScore,
-        docs: doc.docsScore,
-        deps: depsScore,
-      }
+        const signals: FileDebtResult['signals'] = {
+          churn: git.churnScore,
+          coverage: coverageScore,
+          complexity: ast.complexityScore,
+          knowledge: git.knowledgeScore,
+          docs: doc.docsScore,
+          deps: depsScore,
+        }
 
-      const score = computeScore(signals, weights)
-      const level = assignLevel(score, config.thresholds)
+        const score = computeScore(signals, weights)
+        const level = assignLevel(score, config.thresholds)
 
-      return {
-        path: filePath,
-        score,
-        level,
-        signals,
-        meta: {
-          lastModified: git.lastModified,
-          authors: git.authors,
-          commitCount: git.commitCount,
-          testCoverage: coverageMissing ? 0 : 100 - coverageScore,
-          linesOfCode: ast.linesOfCode,
-          satdCount: doc.satdCount,
-          circularDeps,
-          fanIn,
-        },
-      }
-    }),
-  )
+        return {
+          path: filePath,
+          score,
+          level,
+          signals,
+          meta: {
+            lastModified: git.lastModified,
+            authors: git.authors,
+            commitCount: git.commitCount,
+            testCoverage: coverageMissing ? 0 : 100 - coverageScore,
+            linesOfCode: ast.linesOfCode,
+            satdCount: doc.satdCount,
+            circularDeps,
+            fanIn,
+          },
+        }
+      }),
+    )
+    results.push(...batchResults)
+  }
 
   results.sort((a, b) => b.score - a.score)
 
