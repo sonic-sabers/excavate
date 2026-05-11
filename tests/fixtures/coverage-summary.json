@@ -1,0 +1,5 @@
+{
+  "total": { "statements": { "pct": 70 }, "branches": { "pct": 60 }, "functions": { "pct": 80 }, "lines": { "pct": 72 } },
+  "src/a.ts": { "statements": { "pct": 90 }, "branches": { "pct": 80 }, "functions": { "pct": 100 }, "lines": { "pct": 90 } },
+  "src/complex.ts": { "statements": { "pct": 20 }, "branches": { "pct": 10 }, "functions": { "pct": 50 }, "lines": { "pct": 20 } }
+}

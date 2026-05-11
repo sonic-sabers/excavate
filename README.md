@@ -10,6 +10,8 @@ npx excavate
 
 > Requires Node.js ≥ 18 and a git repository.
 
+![excavate demo](assets/demo.gif)
+
 ---
 
 ## What you get
@@ -113,6 +115,53 @@ It includes:
 npx excavate --report
 open excavate-report/index.html
 ```
+
+---
+
+## Comparing scans (trend delta)
+
+Save a baseline, make changes, compare:
+
+```bash
+# Save baseline
+excavate . --output json
+cp excavate-report/excavate-report.json baseline.json
+
+# ... make code changes ...
+
+# Compare
+excavate . --output json
+excavate diff baseline.json excavate-report/excavate-report.json
+```
+
+Output shows which files got better or worse, with colour-coded deltas. Use it in CI: save a baseline on `main`, compare on every PR branch.
+
+---
+
+## GitHub Action
+
+Post a debt summary comment on every pull request automatically:
+
+```yaml
+# .github/workflows/excavate.yml
+name: Debt Scan
+on: [pull_request]
+
+jobs:
+  excavate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: sonic-sabers/excavate-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fail-above: '70'
+```
+
+See [sonic-sabers/excavate-action](https://github.com/sonic-sabers/excavate-action) for full docs.
 
 ---
 

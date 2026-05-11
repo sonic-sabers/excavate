@@ -7,6 +7,7 @@ import { createRequire } from 'module'
 import { loadConfig } from './scorer/weights.js'
 import { scan } from './scanner/index.js'
 import { printLogo, printResults } from './output/terminal.js'
+import type { ScanResult } from './types.js'
 
 const require = createRequire(import.meta.url)
 const pkg = require('../package.json') as { version: string }
@@ -41,22 +42,14 @@ program
     }
 
     const repoRoot = path.resolve(scanPath)
-
     const config = await loadConfig(opts.config)
 
     if (opts.since) {
       config.gitDays = parseInt(opts.since, 10)
     }
 
-    if (config.output.includes('html')) {
-      console.warn('HTML output is not yet available — coming in the next release. Falling back to terminal.')
-      config.output = config.output.filter((o) => o !== 'html') as typeof config.output
-      if (config.output.length === 0) config.output = ['terminal']
-    }
-
     if (opts.report) {
-      config.output = ['terminal']
-      console.warn('HTML output is not yet available — coming in the next release.')
+      config.output = ['terminal', 'html']
     } else if (opts.json) {
       config.output = ['json']
     } else {
@@ -74,9 +67,7 @@ program
     printLogo(pkg.version)
 
     const spinner = ora(`scanning ${scanPath}`).start()
-
     const result = await scan(repoRoot, config)
-
     spinner.stop()
 
     const top = opts.top ? parseInt(opts.top, 10) : undefined
@@ -85,13 +76,47 @@ program
       printResults(result, top)
     }
 
-    if (config.output.includes('json')) {
-      console.log(JSON.stringify(result, null, 2))
+    if (config.output.includes('html')) {
+      const { writeHtmlReport } = await import('./output/htmlReport.js')
+      const outPath = await writeHtmlReport(result, config.reportDir)
+      console.log(`HTML report → ${outPath}`)
     }
 
-    if (config.failAbove !== null && result.summary.avgScore > config.failAbove) {
+    if (config.output.includes('json')) {
+      if (opts.json) {
+        // --json shorthand: stdout only, for piping
+        console.log(JSON.stringify(result, null, 2))
+      } else {
+        // --output json or --output terminal,json: write to file
+        const { writeJsonOutput } = await import('./output/jsonOutput.js')
+        const outPath = await writeJsonOutput(result, config.reportDir)
+        console.log(`JSON report → ${outPath}`)
+      }
+    }
+
+    if (config.failAbove !== null && result.summary.avgScore >= config.failAbove) {
       process.exit(1)
     }
+  })
+
+program
+  .command('diff <before> <after>')
+  .description('Compare two excavate JSON reports and show debt delta')
+  .action(async (beforePath: string, afterPath: string) => {
+    const { readFile } = await import('fs/promises')
+    const { computeDiff, formatDiff } = await import('./diff.js')
+
+    let before: ScanResult, after: ScanResult
+    try {
+      before = JSON.parse(await readFile(path.resolve(beforePath), 'utf8')) as ScanResult
+      after  = JSON.parse(await readFile(path.resolve(afterPath),  'utf8')) as ScanResult
+    } catch (e) {
+      console.error(`Error reading JSON files: ${(e as Error).message}`)
+      process.exit(1)
+    }
+
+    const diff = computeDiff(before, after)
+    console.log(formatDiff(diff))
   })
 
 await program.parseAsync()

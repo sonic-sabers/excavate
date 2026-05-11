@@ -1,6 +1,6 @@
 {
   "name": "excavate",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Dig up what is buried in your codebase.",
   "keywords": [
     "technical-debt",
@@ -43,6 +43,7 @@
   },
   "files": [
     "dist",
+    "templates",
     "README.md",
     "LICENSE",
     "llms.txt"
@@ -53,6 +54,8 @@
     "start": "tsx src/cli.ts",
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
@@ -73,7 +76,8 @@
     "@types/madge": "^5.0.3",
     "@types/node": "^25.6.2",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>excavate — {{repoName}}</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; background: #0f0f0f; color: #e0e0e0; }
+header { padding: 24px 32px; border-bottom: 1px solid #222; display: flex; align-items: center; gap: 16px; }
+.logo { color: #BA7517; font-size: 22px; line-height: 1.2; white-space: pre; }
+h1 { font-size: 18px; font-weight: 600; }
+.meta { font-size: 12px; color: #666; margin-top: 4px; }
+.badge { padding: 4px 10px; border-radius: 4px; font-size: 13px; font-weight: 700; margin-left: auto; }
+.badge.bedrock { background: #7f1d1d; color: #fca5a5; }
+.badge.deep    { background: #713f12; color: #fcd34d; }
+.badge.surface { background: #1e3a5f; color: #93c5fd; }
+.badge.clear   { background: #14532d; color: #86efac; }
+.cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 20px 32px; }
+.card { background: #1a1a1a; border-radius: 8px; padding: 16px; border: 1px solid #2a2a2a; }
+.card-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #666; }
+.card-value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+.card.bedrock .card-value { color: #f87171; }
+.card.deep    .card-value { color: #fbbf24; }
+.card.surface .card-value { color: #60a5fa; }
+.card.clear   .card-value { color: #4ade80; }
+#treemap { width: 100%; height: 480px; padding: 0 32px 20px; }
+#treemap svg { width: 100%; height: 100%; display: block; }
+.node rect { stroke: #0f0f0f; stroke-width: 1px; cursor: pointer; transition: opacity 0.15s; }
+.node rect:hover { opacity: 0.8; }
+.node text { pointer-events: none; font-size: 10px; fill: rgba(255,255,255,0.85); }
+.panel { display: none; position: fixed; top: 0; right: 0; width: 340px; height: 100vh; background: #1a1a1a; border-left: 1px solid #333; padding: 24px; overflow-y: auto; z-index: 10; }
+.panel.open { display: block; }
+.panel h2 { font-size: 13px; word-break: break-all; margin-bottom: 16px; padding-right: 20px; }
+.panel-close { float: right; cursor: pointer; color: #666; font-size: 18px; line-height: 1; }
+.score-big { font-size: 48px; font-weight: 700; margin-bottom: 4px; }
+.level-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
+.signal-row { display: flex; align-items: center; margin-bottom: 10px; gap: 8px; }
+.signal-name { font-size: 12px; color: #888; width: 80px; flex-shrink: 0; }
+.signal-bar-wrap { flex: 1; height: 6px; background: #333; border-radius: 3px; overflow: hidden; }
+.signal-bar { height: 100%; border-radius: 3px; }
+.signal-val { font-size: 12px; width: 30px; text-align: right; color: #ccc; }
+.explanation { font-size: 12px; color: #888; line-height: 1.7; margin-top: 16px; border-top: 1px solid #2a2a2a; padding-top: 16px; }
+.explanation p { margin-bottom: 10px; }
+table { border-collapse: collapse; font-size: 12px; margin: 0 32px 40px; width: calc(100% - 64px); }
+th { text-align: left; padding: 8px 12px; border-bottom: 1px solid #2a2a2a; color: #666; cursor: pointer; user-select: none; white-space: nowrap; }
+th:hover { color: #aaa; }
+td { padding: 8px 12px; border-bottom: 1px solid #1a1a1a; font-family: monospace; }
+.level-pill { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.level-pill.bedrock { background: #7f1d1d; color: #fca5a5; }
+.level-pill.deep    { background: #713f12; color: #fcd34d; }
+.level-pill.surface { background: #1e3a5f; color: #93c5fd; }
+.level-pill.clear   { background: #14532d; color: #86efac; }
+footer { text-align: center; padding: 20px; color: #444; font-size: 12px; border-top: 1px solid #1a1a1a; }
+footer a { color: #666; text-decoration: none; }
+footer a:hover { color: #aaa; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">████
+███
+██
+█</div>
+  <div>
+    <h1>{{repoName}}</h1>
+    <div class="meta">scanned {{scannedAt}} &nbsp;·&nbsp; {{filesScanned}} files &nbsp;·&nbsp; {{durationMs}}ms</div>
+  </div>
+  <span class="badge {{avgLevel}}">avg score {{avgScore}}</span>
+</header>
+
+<div class="cards">
+  <div class="card bedrock"><div class="card-label">Bedrock</div><div class="card-value">{{summary.bedrock}}</div></div>
+  <div class="card deep"><div class="card-label">Deep</div><div class="card-value">{{summary.deep}}</div></div>
+  <div class="card surface"><div class="card-label">Surface</div><div class="card-value">{{summary.surface}}</div></div>
+  <div class="card clear"><div class="card-label">Clear</div><div class="card-value">{{summary.clear}}</div></div>
+</div>
+
+<div id="treemap"><svg id="treemap-svg"></svg></div>
+
+<div class="panel" id="panel">
+  <span class="panel-close" onclick="closePanel()">✕</span>
+  <h2 id="panel-title"></h2>
+  <div id="panel-score" class="score-big"></div>
+  <div id="panel-level" class="level-label"></div>
+  <div id="panel-signals"></div>
+  <div class="explanation" id="panel-explanation"></div>
+</div>
+
+<table id="file-table">
+<thead><tr>
+  <th onclick="sortBy('path')">File</th>
+  <th onclick="sortBy('level')">Level</th>
+  <th onclick="sortBy('score')">Score ↓</th>
+  <th onclick="sortBy('churn')">Churn</th>
+  <th onclick="sortBy('coverage')">Coverage gap</th>
+  <th onclick="sortBy('complexity')">Complexity</th>
+  <th onclick="sortBy('knowledge')">Knowledge risk</th>
+  <th onclick="sortBy('docs')">Docs</th>
+  <th onclick="sortBy('deps')">Deps</th>
+</tr></thead>
+<tbody id="table-body"></tbody>
+</table>
+
+<footer>generated by <a href="https://github.com/sonic-sabers/excavate">excavate</a> &nbsp;·&nbsp; dig up what is buried in your codebase</footer>
+
+<script>
+const DATA = {{{dataJson}}};
+const COLORS = { bedrock: '#b91c1c', deep: '#d97706', surface: '#2563eb', clear: '#16a34a' };
+const SIGNAL_EXPLANATIONS = {
+  churn:      'How often this file changes. High churn means instability — every change risks introducing bugs into code that is already under pressure.',
+  coverage:   'How much of this file is untested. A high coverage gap means changes here have no safety net and bugs can ship undetected.',
+  complexity: 'How hard this code is to follow. High cyclomatic complexity means more decision paths — more places for bugs to hide, and longer to review.',
+  knowledge:  'How many people have ever touched this file. A score of 100 means only one person has ever committed here — if they leave, the knowledge leaves with them.',
+  docs:       'How well documented this file is, including self-admitted debt (TODO, FIXME, HACK comments). High score means low documentation and high acknowledged debt.',
+  deps:       'Circular dependencies, outdated packages, and known security vulnerabilities. A high score means this file is deeply tangled in a fragile dependency graph.',
+};
+
+// Treemap
+(function() {
+  const container = document.getElementById('treemap');
+  const svg = document.getElementById('treemap-svg');
+  const W = container.offsetWidth;
+  const H = container.offsetHeight;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+
+  function drawRect(file, x, y, w, h) {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'node');
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', x); rect.setAttribute('y', y);
+    rect.setAttribute('width', Math.max(w - 1, 0));
+    rect.setAttribute('height', Math.max(h - 1, 0));
+    rect.setAttribute('fill', COLORS[file.level]);
+    rect.setAttribute('rx', '2');
+    rect.onclick = () => openPanel(file);
+    g.appendChild(rect);
+    if (w > 50 && h > 18) {
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', x + 4); text.setAttribute('y', y + 13);
+      const name = file.path.split('/').pop() || file.path;
+      text.textContent = name.length > Math.floor(w / 7) ? name.slice(0, Math.floor(w / 7)) + '…' : name;
+      g.appendChild(text);
+    }
+    svg.appendChild(g);
+  }
+
+  function layout(files, x, y, w, h) {
+    if (!files.length) return;
+    if (files.length === 1) { drawRect(files[0], x, y, w, h); return; }
+    const total = files.reduce((s, f) => s + Math.max(f.meta.linesOfCode || 1, 1), 0);
+    let acc = 0, split = 0;
+    for (let i = 0; i < files.length; i++) {
+      acc += Math.max(files[i].meta.linesOfCode || 1, 1);
+      if (acc >= total / 2) { split = i + 1; break; }
+    }
+    const ratio = acc / total;
+    const a = files.slice(0, split), b = files.slice(split);
+    if (w >= h) {
+      layout(a, x, y, w * ratio, h);
+      layout(b, x + w * ratio, y, w * (1 - ratio), h);
+    } else {
+      layout(a, x, y, w, h * ratio);
+      layout(b, x, y + h * ratio, w, h * (1 - ratio));
+    }
+  }
+
+  layout([...DATA.files].sort((a, b) => (b.meta.linesOfCode || 1) - (a.meta.linesOfCode || 1)), 0, 0, W, H);
+})();
+
+// Panel
+function openPanel(file) {
+  document.getElementById('panel-title').textContent = file.path;
+  document.getElementById('panel-score').textContent = file.score;
+  document.getElementById('panel-score').style.color = COLORS[file.level];
+  document.getElementById('panel-level').textContent = file.level.toUpperCase();
+
+  const signals = ['churn','coverage','complexity','knowledge','docs','deps'];
+  document.getElementById('panel-signals').innerHTML = signals.map(s => {
+    const v = Math.round(file.signals[s]);
+    const color = v >= 70 ? '#f87171' : v >= 40 ? '#fbbf24' : '#4ade80';
+    return '<div class="signal-row">' +
+      '<div class="signal-name">' + s + '</div>' +
+      '<div class="signal-bar-wrap"><div class="signal-bar" style="width:' + v + '%;background:' + color + '"></div></div>' +
+      '<div class="signal-val">' + v + '</div>' +
+      '</div>';
+  }).join('');
+
+  document.getElementById('panel-explanation').innerHTML =
+    signals.map(s => '<p><strong>' + s + ':</strong> ' + SIGNAL_EXPLANATIONS[s] + '</p>').join('');
+
+  document.getElementById('panel').classList.add('open');
+}
+function closePanel() { document.getElementById('panel').classList.remove('open'); }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePanel(); });
+
+// Table
+let sortKey = 'score', sortAsc = false;
+function sortBy(k) {
+  if (sortKey === k) sortAsc = !sortAsc; else { sortKey = k; sortAsc = false; }
+  renderTable();
+}
+function renderTable() {
+  const files = [...DATA.files].sort((a, b) => {
+    const av = sortKey === 'path' ? a.path : sortKey === 'level' ? a.level : sortKey === 'score' ? a.score : (a.signals[sortKey] ?? 0);
+    const bv = sortKey === 'path' ? b.path : sortKey === 'level' ? b.level : sortKey === 'score' ? b.score : (b.signals[sortKey] ?? 0);
+    if (av < bv) return sortAsc ? -1 : 1;
+    if (av > bv) return sortAsc ? 1 : -1;
+    return 0;
+  });
+  document.getElementById('table-body').innerHTML = files.map(f =>
+    '<tr>' +
+    '<td>' + f.path + '</td>' +
+    '<td><span class="level-pill ' + f.level + '">' + f.level + '</span></td>' +
+    '<td style="font-weight:700">' + f.score + '</td>' +
+    '<td>' + Math.round(f.signals.churn) + '</td>' +
+    '<td>' + Math.round(f.signals.coverage) + '</td>' +
+    '<td>' + Math.round(f.signals.complexity) + '</td>' +
+    '<td>' + Math.round(f.signals.knowledge) + '</td>' +
+    '<td>' + Math.round(f.signals.docs) + '</td>' +
+    '<td>' + Math.round(f.signals.deps) + '</td>' +
+    '</tr>'
+  ).join('');
+}
+renderTable();
+</script>
+</body>
+</html>
