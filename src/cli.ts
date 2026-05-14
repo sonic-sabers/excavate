@@ -94,6 +94,8 @@ program
       const { writeHtmlReport } = await import('./output/htmlReport.js')
       const outPath = await writeHtmlReport(result, config.reportDir, history)
       console.log(`HTML report → ${outPath}`)
+      const { default: open } = await import('open')
+      await open(outPath)
     }
 
     if (config.output.includes('json')) {
