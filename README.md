@@ -18,7 +18,7 @@ npx excavate
 
 ```
   ████
-  ███          Excavate v0.1.0
+  ███          Excavate v1.0.1
   ██
   █            your codebase, laid bare
 
@@ -170,7 +170,7 @@ jobs:
       - uses: sonic-sabers/excavate-action@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          fail-above: '70'
+          fail-above: "70"
 ```
 
 See [sonic-sabers/excavate-action](https://github.com/sonic-sabers/excavate-action) for full docs.
@@ -273,7 +273,7 @@ console.log(result.files.filter((f) => f.level === "bedrock"));
 You can. But there are four things an LLM cannot do:
 
 **1. It can't read your git history.**
-Debt isn't just in how code looks — it's in how it *behaves over time*. A file that's been touched 60 times in 90 days by a single author is a risk that no static snapshot reveals. LLMs see one commit. Excavate sees the whole dig site.
+Debt isn't just in how code looks — it's in how it _behaves over time_. A file that's been touched 60 times in 90 days by a single author is a risk that no static snapshot reveals. LLMs see one commit. Excavate sees the whole dig site.
 
 **2. It can't tell you where to look first.**
 Ask an LLM to "find the worst file in this repo" and it'll pick something that looks messy. Excavate ranks by a weighted signal model — churn, coverage gap, complexity, bus factor, circular deps, and SATD — built on the same empirical research that Code Maat and DebtViz are based on. The worst-looking file is rarely the highest-risk file.
@@ -290,13 +290,13 @@ Use LLMs to fix the files Excavate surfaces. Use Excavate to find them.
 
 ## Why not SonarQube, Code Climate, or Plato?
 
-| Tool | The gap |
-| --- | --- |
-| **SonarQube** | Requires a Java server, a running instance, and admin setup. Zero-config it is not. |
-| **Code Climate** | SaaS. Your code leaves your network. Pricing starts at $10/seat. |
-| **Plato** | JS-only, CJS, unmaintained since 2018. No git signals, no coverage integration. |
-| **ESLint** | Lints syntax and style. Has no model of time, history, or who knows the code. |
-| **npm audit** | CVEs only. One signal out of six. |
+| Tool             | The gap                                                                             |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| **SonarQube**    | Requires a Java server, a running instance, and admin setup. Zero-config it is not. |
+| **Code Climate** | SaaS. Your code leaves your network. Pricing starts at $10/seat.                    |
+| **Plato**        | JS-only, CJS, unmaintained since 2018. No git signals, no coverage integration.     |
+| **ESLint**       | Lints syntax and style. Has no model of time, history, or who knows the code.       |
+| **npm audit**    | CVEs only. One signal out of six.                                                   |
 
 Excavate is the only tool that combines **git history + AST complexity + coverage gaps + bus factor + circular deps + SATD** into a single ranked score, runs in one `npx` command with no server or account, and produces a report your manager can open in a browser.
 
@@ -327,6 +327,7 @@ npx excavate llms.txt   # not a real command — fetch from GitHub raw or npm pa
 ```
 
 Direct URL (raw):
+
 ```
 https://raw.githubusercontent.com/sonic-sabers/excavate/main/llms.txt
 ```
