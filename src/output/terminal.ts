@@ -1,5 +1,6 @@
 import chalk from 'chalk'
-import { type FileDebtResult, type ScanResult } from '../types.js'
+import { type FileDebtResult, type ScanResult, type DebtArchetype } from '../types.js'
+import { ARCHETYPE_LABELS } from '../scorer/archetype.js'
 
 const LOGO = [
   '  ████',
@@ -13,6 +14,14 @@ const LEVEL_COLOR: Record<FileDebtResult['level'], (s: string) => string> = {
   deep:    (s) => chalk.yellow(s),
   surface: (s) => chalk.blue(s),
   clear:   (s) => chalk.green(s),
+}
+
+const GRADE_COLOR: Record<string, (s: string) => string> = {
+  A: (s) => chalk.green.bold(s),
+  B: (s) => chalk.cyan.bold(s),
+  C: (s) => chalk.yellow.bold(s),
+  D: (s) => chalk.hex('#FF8C00').bold(s),
+  F: (s) => chalk.red.bold(s),
 }
 
 const SIGNAL_LABELS: Record<keyof FileDebtResult['signals'], string> = {
@@ -36,6 +45,12 @@ function pad(s: string, n: number): string {
   return s.padEnd(n)
 }
 
+function archetypeLabel(archetype: DebtArchetype): string {
+  const label = ARCHETYPE_LABELS[archetype]
+  if (!label?.name) return ''
+  return label.name
+}
+
 export function printLogo(version: string): void {
   console.log(chalk.hex('#BA7517')(LOGO))
   console.log()
@@ -44,31 +59,73 @@ export function printLogo(version: string): void {
   console.log()
 }
 
-export function printResults(result: ScanResult, top?: number, base?: ScanResult | null): void {
-  const files = top ? result.files.slice(0, top) : result.files
+export function printHealthGrade(result: ScanResult): void {
+  const { healthGrade } = result.summary
+  if (!healthGrade) return
+
+  const colorize = GRADE_COLOR[healthGrade.grade] ?? ((s: string) => s)
+  const gradeStr = colorize(`${healthGrade.grade}`)
+  const scoreStr = `(${healthGrade.score}/100)`
+
+  let trendStr = ''
+  if (healthGrade.trend === 'improving') trendStr = chalk.green(' ↑ improving')
+  else if (healthGrade.trend === 'degrading') trendStr = chalk.red(' ↓ degrading')
+  else if (healthGrade.trend === 'stable') trendStr = chalk.dim(' → stable')
+
+  console.log(`  health grade   ${gradeStr}   ${chalk.dim(scoreStr)}${trendStr}`)
+}
+
+export function printResults(result: ScanResult, top?: number, base?: ScanResult | null, showOrphans = false): void {
+  const { summary } = result
+
+  // Health grade header
+  if (summary.healthGrade) {
+    printHealthGrade(result)
+    console.log()
+  }
+
+  const nonOrphans = result.files.filter((f) => !f.meta.isOrphan)
+  const orphans = result.files.filter((f) => f.meta.isOrphan)
+
+  const displayFiles = top ? nonOrphans.slice(0, top) : nonOrphans
 
   const maxPathLen = Math.min(
-    60,
-    Math.max(...files.map((f) => f.path.length), 10),
+    55,
+    Math.max(...displayFiles.map((f) => f.path.length), 10),
   )
 
-  for (const file of files) {
+  for (const file of displayFiles) {
     const colorize = LEVEL_COLOR[file.level]
     const label = pad(file.level.toUpperCase(), 8)
     const filePath = pad(file.path, maxPathLen)
     const score = String(file.score).padStart(3)
+    const arch = file.archetype !== 'healthy' ? chalk.dim(`  ${archetypeLabel(file.archetype)}`) : ''
     const signals = topSignals(file.signals).join('  ')
+    const signalStr = signals ? `   ${chalk.dim(signals)}` : ''
 
     console.log(
-      `  ${colorize(label)}  ${chalk.dim(filePath)}  ${chalk.bold(score)}${signals ? '   ' + chalk.dim(signals) : ''}`,
+      `  ${colorize(label)}  ${chalk.dim(filePath)}  ${chalk.bold(score)}${arch}${signalStr}`,
     )
+  }
+
+  // Orphans section
+  if (showOrphans && orphans.length > 0) {
+    console.log()
+    const orphanLOC = orphans.reduce((sum, f) => sum + f.meta.linesOfCode, 0)
+    console.log(chalk.dim(`  ORPHANS (${orphans.length} files, ${orphanLOC} lines — nothing imports these)`))
+    for (const file of orphans) {
+      const score = String(file.score).padStart(3)
+      const filePath = pad(file.path, maxPathLen)
+      const deadStr = file.meta.deadExports > 0 ? chalk.dim(`   dead exports: ${file.meta.deadExports}`) : ''
+      console.log(`  ${chalk.dim('GHOST   ')}  ${chalk.dim(filePath)}  ${score}${deadStr}`)
+    }
   }
 
   const div = chalk.dim('  ' + '─'.repeat(60))
   console.log()
   console.log(div)
 
-  const { filesScanned, durationMs, summary } = result
+  const { filesScanned, durationMs } = result
   const dur = (durationMs / 1000).toFixed(1) + 's'
   const hrs = summary.estimatedHours > 0 ? `~${summary.estimatedHours}h` : '—'
 
@@ -84,6 +141,18 @@ export function printResults(result: ScanResult, top?: number, base?: ScanResult
   console.log(
     `  avg score       ${String(summary.avgScore).padStart(5)}     est. cleanup  ${hrs}`,
   )
+
+  if (summary.orphanFiles > 0) {
+    console.log(
+      `  orphan files    ${String(summary.orphanFiles).padStart(5)}     orphan LOC    ${String(summary.orphanLOC).padStart(4)}`,
+    )
+  }
+  if (summary.knowledgeCliffFiles > 0) {
+    console.log(
+      `  knowledge cliff ${String(summary.knowledgeCliffFiles).padStart(4)}     coupled pairs ${String(summary.temporallyCoupledPairs).padStart(4)}`,
+    )
+  }
+
   console.log(div)
 
   // Delta line

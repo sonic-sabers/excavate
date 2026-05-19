@@ -1,9 +1,26 @@
 export type DebtLevel = 'bedrock' | 'deep' | 'surface' | 'clear'
 
+export type DebtArchetype =
+  | 'time-bomb'
+  | 'load-bearing-wall'
+  | 'revolving-door'
+  | 'black-box'
+  | 'spaghetti'
+  | 'fossil'
+  | 'ghost'
+  | 'healthy'
+
+export interface HealthGrade {
+  score: number
+  grade: 'A' | 'B' | 'C' | 'D' | 'F'
+  trend?: 'improving' | 'degrading' | 'stable'
+}
+
 export interface FileDebtResult {
   path: string
   score: number
   level: DebtLevel
+  archetype: DebtArchetype
   signals: {
     churn: number
     coverage: number
@@ -21,6 +38,16 @@ export interface FileDebtResult {
     satdCount: number
     circularDeps: number
     fanIn: number
+    // phase 4 additions
+    survivalPct: number
+    recentAuthors: string[]
+    knowledgeCliff: boolean
+    refactorCount: number
+    temporalCoupling: Array<{ file: string; pct: number }>
+    isOrphan: boolean
+    deadExports: number
+    concernCount: number
+    exportKinds: string[]
   }
 }
 
@@ -36,8 +63,44 @@ export interface ScanResult {
     surface: number
     clear: number
     estimatedHours: number
+    // phase 4 additions
+    healthGrade: HealthGrade
+    orphanFiles: number
+    orphanLOC: number
+    temporallyCoupledPairs: number
+    knowledgeCliffFiles: number
+    narrative: string
   }
   files: FileDebtResult[]
+}
+
+export interface ScanDiff {
+  previous: ScanResult
+  current: ScanResult
+  healthGrade: { previous: HealthGrade; current: HealthGrade }
+  regressions: Array<{
+    path: string
+    previousScore: number
+    currentScore: number
+    scoreDelta: number
+    previousLevel: DebtLevel
+    currentLevel: DebtLevel
+    levelChanged: boolean
+    archetypeChanged: boolean
+    previousArchetype: DebtArchetype
+    currentArchetype: DebtArchetype
+  }>
+  improvements: Array<{
+    path: string
+    previousScore: number
+    currentScore: number
+    scoreDelta: number
+    previousLevel: DebtLevel
+    currentLevel: DebtLevel
+    levelChanged: boolean
+  }>
+  newBedrock: string[]
+  resolved: string[]
 }
 
 export interface ExcavateConfig {
@@ -62,6 +125,16 @@ export interface ExcavateConfig {
   gitDays: number
   history: boolean
   historyLimit: number
+  // phase 4 additions
+  coupling: {
+    enabled: boolean
+    threshold: number
+  }
+  orphans: {
+    enabled: boolean
+    minLOC: number
+  }
+  autoOpen: boolean
 }
 
 export const DEFAULT_CONFIG: ExcavateConfig = {
@@ -92,4 +165,7 @@ export const DEFAULT_CONFIG: ExcavateConfig = {
   gitDays: 90,
   history: true,
   historyLimit: 5,
+  coupling: { enabled: true, threshold: 40 },
+  orphans: { enabled: true, minLOC: 10 },
+  autoOpen: true,
 }

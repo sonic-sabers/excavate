@@ -7,14 +7,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURE = path.resolve(__dirname, 'fixtures/fake-repo')
 
 describe('scanDeps', () => {
-  it('returns a Map', async () => {
+  it('returns a fileMap and cruiseResult', async () => {
     const result = await scanDeps(FIXTURE)
-    expect(result).toBeInstanceOf(Map)
+    expect(result).toHaveProperty('fileMap')
+    expect(result.fileMap).toBeInstanceOf(Map)
   })
 
   it('every file entry has depsScore 0–100', async () => {
-    const result = await scanDeps(FIXTURE)
-    for (const [key, val] of result) {
+    const { fileMap } = await scanDeps(FIXTURE)
+    for (const [key, val] of fileMap) {
       if (key === '__repo__') continue
       expect(val.depsScore).toBeGreaterThanOrEqual(0)
       expect(val.depsScore).toBeLessThanOrEqual(100)
@@ -22,23 +23,23 @@ describe('scanDeps', () => {
   })
 
   it('every file entry has non-negative fanIn', async () => {
-    const result = await scanDeps(FIXTURE)
-    for (const [key, val] of result) {
+    const { fileMap } = await scanDeps(FIXTURE)
+    for (const [key, val] of fileMap) {
       if (key === '__repo__') continue
       expect(val.fanIn).toBeGreaterThanOrEqual(0)
     }
   })
 
   it('every file entry has non-negative circularDeps', async () => {
-    const result = await scanDeps(FIXTURE)
-    for (const [key, val] of result) {
+    const { fileMap } = await scanDeps(FIXTURE)
+    for (const [key, val] of fileMap) {
       if (key === '__repo__') continue
       expect(val.circularDeps).toBeGreaterThanOrEqual(0)
     }
   })
 
   it('__repo__ sentinel key present', async () => {
-    const result = await scanDeps(FIXTURE)
-    expect(result.has('__repo__')).toBe(true)
+    const { fileMap } = await scanDeps(FIXTURE)
+    expect(fileMap.has('__repo__')).toBe(true)
   })
 })

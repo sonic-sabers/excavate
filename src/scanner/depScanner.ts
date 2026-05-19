@@ -3,6 +3,7 @@ import { readFile } from 'fs/promises'
 import path from 'path'
 import { createRequire } from 'module'
 import { cruise } from 'dependency-cruiser'
+import type { ICruiseResult } from 'dependency-cruiser'
 
 const require = createRequire(import.meta.url)
 
@@ -12,10 +13,16 @@ export interface DepFileResult {
   circularDeps: number
 }
 
-export async function scanDeps(repoRoot: string): Promise<Map<string, DepFileResult>> {
-  const result = new Map<string, DepFileResult>()
+export interface DepScanResult {
+  fileMap: Map<string, DepFileResult>
+  cruiseResult: ICruiseResult | null
+}
+
+export async function scanDeps(repoRoot: string): Promise<DepScanResult> {
+  const fileMap = new Map<string, DepFileResult>()
   const fanInMap = new Map<string, number>()
   const circularMap = new Map<string, number>()
+  let storedCruiseResult: ICruiseResult | null = null
 
   // --- 1. Fan-in + circular via dependency-cruiser ---
   try {
@@ -25,7 +32,8 @@ export async function scanDeps(repoRoot: string): Promise<Map<string, DepFileRes
       baseDir: repoRoot,
       doNotFollow: { path: 'node_modules' },
     })
-    const modules = (cruiseResult.output as { modules?: Array<{
+    storedCruiseResult = cruiseResult.output as ICruiseResult
+    const modules = (storedCruiseResult as { modules?: Array<{
       source: string
       dependencies?: Array<{ resolved?: string; module: string; circular?: boolean }>
     }> }).modules ?? []
@@ -135,17 +143,17 @@ export async function scanDeps(repoRoot: string): Promise<Map<string, DepFileRes
       cveScore       * 0.15,
     )
     const relFile = path.isAbsolute(file) ? path.relative(repoRoot, file) : file
-    result.set(relFile, { depsScore, fanIn, circularDeps })
+    fileMap.set(relFile, { depsScore, fanIn, circularDeps })
   }
 
   // Repo-level baseline: CVE + staleness only (no per-file coupling/circular).
   // Weights 0.15 + 0.25 = 0.40 — rescale to 0–100 so files without dep-graph
   // data get a fair score rather than a deflated one.
-  result.set('__repo__', {
+  fileMap.set('__repo__', {
     depsScore: Math.round((cveScore * 0.15 + stalenessScore * 0.25) / 0.40),
     fanIn: 0,
     circularDeps: 0,
   })
 
-  return result
+  return { fileMap, cruiseResult: storedCruiseResult }
 }

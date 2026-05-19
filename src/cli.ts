@@ -27,6 +27,11 @@ program
   .option('--json', 'Shorthand for --output json')
   .option('--top <n>', 'Show only top N worst files')
   .option('--since <days>', 'Git history window in days')
+  .option('--diff', 'Compare to last scan (.excavate/last-scan.json)')
+  .option('--diff-only', 'Show only changed files (implies --diff)')
+  .option('--narrative', 'Print plain-English summary to stdout')
+  .option('--orphans', 'Show orphan files section in terminal output')
+  .option('--no-open', 'Do not auto-open HTML report in browser')
   .action(async (scanPath: string, opts: {
     output: string
     report?: boolean
@@ -37,6 +42,11 @@ program
     json?: boolean
     top?: string
     since?: string
+    diff?: boolean
+    diffOnly?: boolean
+    narrative?: boolean
+    orphans?: boolean
+    open: boolean
   }) => {
     if (!opts.color) {
       chalk.level = 0
@@ -65,10 +75,15 @@ program
       config.failAbove = parseFloat(opts.failAbove)
     }
 
+    // --no-open overrides config default
+    if (opts.open === false) {
+      config.autoOpen = false
+    }
+
     printLogo(pkg.version)
 
     const spinner = ora(`scanning ${scanPath}`).start()
-    const result = await scan(repoRoot, config)
+    const result = await scan(repoRoot, config, spinner)
     spinner.stop()
 
     // History: save snapshot, load base + full history for outputs
@@ -85,17 +100,39 @@ program
     }
 
     const top = opts.top ? parseInt(opts.top, 10) : undefined
+    const showOrphans = opts.orphans ?? false
+    const showDiff = opts.diff ?? opts.diffOnly ?? false
 
-    if (config.output.includes('terminal')) {
-      printResults(result, top, base)
+    if (opts.narrative) {
+      console.log()
+      console.log(result.summary.narrative)
+      console.log()
+    }
+
+    if (opts.diffOnly && base) {
+      const { computeDiff, printDiff } = await import('./output/diffOutput.js')
+      const diff = computeDiff(base, result)
+      printDiff(diff)
+    } else {
+      if (config.output.includes('terminal')) {
+        printResults(result, top, base, showOrphans)
+      }
+
+      if (showDiff && base) {
+        const { computeDiff, printDiff } = await import('./output/diffOutput.js')
+        const diff = computeDiff(base, result)
+        printDiff(diff)
+      }
     }
 
     if (config.output.includes('html')) {
       const { writeHtmlReport } = await import('./output/htmlReport.js')
       const outPath = await writeHtmlReport(result, config.reportDir, history)
       console.log(`HTML report → ${outPath}`)
-      const { default: open } = await import('open')
-      await open(outPath)
+      if (config.autoOpen) {
+        const { default: open } = await import('open')
+        await open(outPath)
+      }
     }
 
     if (config.output.includes('json')) {
@@ -118,7 +155,7 @@ program
   .description('Compare two excavate JSON reports and show debt delta')
   .action(async (beforePath: string, afterPath: string) => {
     const { readFile } = await import('fs/promises')
-    const { computeDiff, formatDiff } = await import('./diff.js')
+    const { computeDiff, printDiff } = await import('./output/diffOutput.js')
 
     let before: ScanResult, after: ScanResult
     try {
@@ -130,7 +167,7 @@ program
     }
 
     const diff = computeDiff(before, after)
-    console.log(formatDiff(diff))
+    printDiff(diff)
   })
 
 await program.parseAsync()
