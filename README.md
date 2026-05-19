@@ -18,11 +18,13 @@ npx excavate
 
 ```
   ████
-  ███          Excavate v1.0.1
+  ███          Excavate v1.0.3
   ██
   █            your codebase, laid bare
 
   scanning ./src  ⠸
+
+  health grade   C   (71/100) → stable
 
   BEDROCK  src/auth/legacy-session.ts        91   churn ▲  coverage ▲  authors:1
   BEDROCK  src/payments/stripe-v1.ts         84   coverage ▲  knowledge ▲
@@ -68,6 +70,19 @@ All signals are normalised to 0–100 before weighting. No magic — just git hi
 
 ---
 
+## What's new in 1.0.2
+
+Excavate now surfaces higher-level debt context in both terminal and HTML reports:
+
+- **Health grade** (`A`–`F`) with trend state when history is available
+- **Debt archetypes** such as time bomb, load-bearing wall, revolving door, black box, spaghetti, fossil, ghost, and healthy
+- **Temporal coupling** — files that repeatedly change together, with co-change percentages
+- **Orphan detection** — files nothing imports, plus dead export counts when available
+- **Knowledge cliff metadata** — recent authors, survival percentage, refactor count, and single-owner risk
+- **Report action drawer** — a sticky `View` action, file metadata, signal tooltips, and a copyable LLM refactor prompt for each file
+
+---
+
 ## Getting started
 
 ```bash
@@ -107,9 +122,13 @@ Pass `--report` to get a self-contained HTML file you can share with your team o
 It includes:
 
 - A **D3 treemap** where box size = lines of code, colour = debt level
-- **Click any file** to see its full signal breakdown with plain-English explanations
-- A **sortable table** of every scanned file
+- **Click any file** or use the sticky **View** button to open a right-side file drawer
+- A **sortable table** of every scanned file, including archetype, survival %, recent authors, coupling, orphan status, and dead exports
+- A **copyable LLM prompt** per file so you can hand the exact debt context to a coding assistant
+- **Signal tooltips** explaining churn, coverage, complexity, knowledge, docs, and deps without cluttering the drawer
 - Summary counts and an estimated cleanup hours figure
+- A **health grade** and plain-English narrative summary
+- An **orphan files section** showing files that appear unused
 - A **debt trend chart** showing avg score over time (appears after 2+ scans)
 - A **comparison toggle** — switch between Latest, vs Base (first-ever scan), and vs Last (previous scan) to see which files improved or worsened
 
@@ -219,8 +238,18 @@ Excavate works out of the box with zero config. When you're ready to tune it, dr
   "output": ["terminal", "html"],
   "reportDir": "./excavate-report",
   "failAbove": null,
+  "gitDays": 90,
   "history": true,
-  "historyLimit": 5
+  "historyLimit": 5,
+  "coupling": {
+    "enabled": true,
+    "threshold": 40
+  },
+  "orphans": {
+    "enabled": true,
+    "minLOC": 10
+  },
+  "autoOpen": true
 }
 ```
 
@@ -246,6 +275,11 @@ Options:
   --json                  Shorthand for --output json
   --top <n>               Show only the top N worst files
   --since <days>          Git history window in days (default: 90)
+  --diff                  Compare this scan to the saved base snapshot
+  --diff-only             Show only changed files (implies --diff)
+  --narrative             Print the plain-English summary to stdout
+  --orphans               Show orphan files in terminal output
+  --no-open               Do not auto-open HTML report in browser
   -v, --version           Show version
   -h, --help              Show help
 ```
@@ -263,7 +297,10 @@ const result = await scan("/path/to/repo", {
 });
 
 console.log(result.summary.avgScore);
+console.log(result.summary.healthGrade);
 console.log(result.files.filter((f) => f.level === "bedrock"));
+console.log(result.files[0].archetype);
+console.log(result.files[0].meta.temporalCoupling);
 ```
 
 ---
@@ -282,7 +319,7 @@ Ask an LLM to "find the worst file in this repo" and it'll pick something that l
 A 50,000-line codebase won't fit in any context window. Summaries lose the signal. Excavate runs locally against the full repo — every file, every commit in the window, every import graph — and collapses it into a ranked list in seconds.
 
 **4. It produces no artefact you can act on.**
-An LLM gives you a paragraph. Excavate gives you a score per file, a sortable table, a D3 treemap you can share with your manager, and a `--fail-above` CI gate that enforces debt thresholds on every PR. The insight becomes process.
+An LLM gives you a paragraph. Excavate gives you a score per file, a sortable table, a D3 treemap you can share with your manager, a copyable file-specific LLM prompt, and a `--fail-above` CI gate that enforces debt thresholds on every PR. The insight becomes process.
 
 Use LLMs to fix the files Excavate surfaces. Use Excavate to find them.
 
@@ -298,7 +335,7 @@ Use LLMs to fix the files Excavate surfaces. Use Excavate to find them.
 | **ESLint**       | Lints syntax and style. Has no model of time, history, or who knows the code.       |
 | **npm audit**    | CVEs only. One signal out of six.                                                   |
 
-Excavate is the only tool that combines **git history + AST complexity + coverage gaps + bus factor + circular deps + SATD** into a single ranked score, runs in one `npx` command with no server or account, and produces a report your manager can open in a browser.
+Excavate combines **git history + AST complexity + coverage gaps + bus factor + circular deps + temporal coupling + orphan/dead-export signals + SATD** into a single ranked score, runs in one `npx` command with no server or account, and produces a report your manager can open in a browser.
 
 ---
 

@@ -2,6 +2,8 @@
 
 > Zero-config CLI that scans any JS/TS codebase and generates a technical debt heatmap. Run `npx excavate` — get a scored, ranked breakdown of which files carry the most accumulated debt.
 
+Current package version documented here: 1.0.2.
+
 ## What it does
 
 excavate combines six signals per file into a single weighted debt score (0–100):
@@ -15,6 +17,8 @@ excavate combines six signals per file into a single weighted debt score (0–10
 
 Scores map to geological debt levels: **bedrock** (70–100), **deep** (40–70), **surface** (20–40), **clear** (0–20).
 
+Recent report metadata includes health grade, debt archetype, survival percentage, recent authors, knowledge-cliff risk, refactor count, temporal coupling, orphan-file detection, and dead export counts.
+
 ## Quick start
 
 ```bash
@@ -25,6 +29,8 @@ npx excavate --fail-above 70    # CI gate — exit 1 if avg score > 70
 npx excavate --top 10           # show only 10 worst files
 npx excavate --since 30         # use last 30 days of git history
 npx excavate --json             # machine-readable JSON output
+npx excavate --narrative        # print plain-English debt summary
+npx excavate --orphans          # include orphan files in terminal output
 ```
 
 Requirements: Node.js >= 18, git repository.
@@ -40,13 +46,17 @@ const result = await scan("/path/to/repo", {
 });
 
 // result.summary.avgScore        — number 0–100
+// result.summary.healthGrade     — { score, grade, trend? }
+// result.summary.narrative       — plain-English report summary
 // result.summary.bedrock         — file count at bedrock level
 // result.files                   — FileDebtResult[] sorted by score desc
 // result.files[0].path           — relative file path
 // result.files[0].score          — 0–100
 // result.files[0].level          — 'bedrock' | 'deep' | 'surface' | 'clear'
+// result.files[0].archetype      — debt archetype classification
 // result.files[0].signals.churn  — 0–100 normalised signal
 // result.files[0].meta.authors   — string[] of git authors
+// result.files[0].meta.temporalCoupling — [{ file, pct }]
 ```
 
 ## Configuration
@@ -62,7 +72,12 @@ Drop `.excavaterc` in repo root or add `excavate` key to `package.json`:
   "output": ["terminal"],
   "reportDir": "./excavate-report",
   "failAbove": null,
-  "gitDays": 90
+  "gitDays": 90,
+  "history": true,
+  "historyLimit": 5,
+  "coupling": { "enabled": true, "threshold": 40 },
+  "orphans": { "enabled": true, "minLOC": 10 },
+  "autoOpen": true
 }
 ```
 
@@ -86,14 +101,19 @@ Options:
   --json                  Shorthand for --output json
   --top <n>               Show only top N worst files
   --since <days>          Git history window in days (default: 90)
+  --diff                  Compare current scan to saved base snapshot
+  --diff-only             Show only changed files (implies --diff)
+  --narrative             Print plain-English summary to stdout
+  --orphans               Show orphan files section in terminal output
+  --no-open               Do not auto-open HTML report in browser
   -v, --version           Show version
   -h, --help              Show help
 ```
 
 ## Output types
 
-- **terminal** — chalk-coloured ranked file list with signal arrows
-- **html** — self-contained D3 treemap (no server, open in browser, shareable)
+- **terminal** — chalk-coloured ranked file list with signal arrows, health grade, optional orphan section
+- **html** — self-contained D3 treemap/report (no server, open in browser, shareable). Includes sortable metadata table, sticky View action, right-side file drawer, signal tooltips, temporal coupling, orphan section, and copyable LLM improvement prompt per file.
 - **json** — full ScanResult object, machine-readable
 
 ## JSON output shape
@@ -111,6 +131,16 @@ interface ScanResult {
     surface: number
     clear: number
     estimatedHours: number // bedrock × 10h estimate
+    healthGrade: {
+      score: number
+      grade: 'A' | 'B' | 'C' | 'D' | 'F'
+      trend?: 'improving' | 'degrading' | 'stable'
+    }
+    orphanFiles: number
+    orphanLOC: number
+    temporallyCoupledPairs: number
+    knowledgeCliffFiles: number
+    narrative: string
   }
   files: FileDebtResult[]
 }
@@ -119,6 +149,15 @@ interface FileDebtResult {
   path: string             // relative to repo root
   score: number            // 0–100
   level: 'bedrock' | 'deep' | 'surface' | 'clear'
+  archetype:
+    | 'time-bomb'
+    | 'load-bearing-wall'
+    | 'revolving-door'
+    | 'black-box'
+    | 'spaghetti'
+    | 'fossil'
+    | 'ghost'
+    | 'healthy'
   signals: {
     churn: number          // 0–100 normalised
     coverage: number       // 0–100 (coverage gap, not %)
@@ -136,9 +175,22 @@ interface FileDebtResult {
     satdCount: number      // TODO/FIXME/HACK hits
     circularDeps: number   // circular dep chains involving file
     fanIn: number          // files that import this file
+    survivalPct: number
+    recentAuthors: string[]
+    knowledgeCliff: boolean
+    refactorCount: number
+    temporalCoupling: Array<{ file: string; pct: number }>
+    isOrphan: boolean
+    deadExports: number
+    concernCount: number
+    exportKinds: string[]
   }
 }
 ```
+
+## AI assistant workflow
+
+Use excavate to choose the file, then use an LLM to make the change. In the HTML report, click **View** on a file and copy the generated **LLM prompt** from the drawer. The prompt includes the target file, top risk signals, metadata, temporal coupling, constraints, tests to run, and required output format.
 
 ## Links
 

@@ -1,6 +1,6 @@
 {
   "name": "excavate",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "Dig up what is buried in your codebase.",
   "keywords": [
     "technical-debt",

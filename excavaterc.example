@@ -26,5 +26,17 @@
   },
   "output": ["terminal", "html", "json"],
   "reportDir": "./excavate-report",
-  "failAbove": 70
+  "failAbove": 70,
+  "gitDays": 90,
+  "history": true,
+  "historyLimit": 5,
+  "coupling": {
+    "enabled": true,
+    "threshold": 40
+  },
+  "orphans": {
+    "enabled": true,
+    "minLOC": 10
+  },
+  "autoOpen": true
 }
