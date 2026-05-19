@@ -2,7 +2,7 @@
 
 > Zero-config CLI that scans any JS/TS codebase and generates a technical debt heatmap. Run `npx excavate` — get a scored, ranked breakdown of which files carry the most accumulated debt.
 
-Current package version documented here: 1.0.2.
+Current package version documented here: 1.0.3.
 
 ## What it does
 

@@ -70,7 +70,7 @@ All signals are normalised to 0–100 before weighting. No magic — just git hi
 
 ---
 
-## What's new in 1.0.2
+## What's new in 13
 
 Excavate now surfaces higher-level debt context in both terminal and HTML reports:
 
