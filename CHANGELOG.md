@@ -4,6 +4,17 @@ All notable changes to excavate are documented here.
 
 ---
 
+## v1.0.4
+
+- `CHANGELOG.md` added to track release history
+- Publish workflow added for consistent releases
+- Fixed complexity scoring: per-function cyclomatic complexity replaces file-level aggregate
+- Fixed `--diff` and `--diff-only` to compare against the immediately preceding run, not oldest baseline
+- Shared git client across scanners to reduce process spawning overhead
+- Path normalization fix for orphan scanner module sources
+
+---
+
 ## v1.0.3
 
 - Health grade from `A` to `F`

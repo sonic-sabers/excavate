@@ -109,7 +109,7 @@ npx excavate --since 30
 
 ```txt
   ████
-  ███          Excavate v1.0.3
+  ███          Excavate v1.0.4
   ██
   █            your codebase, laid bare
 
@@ -284,6 +284,17 @@ npx excavate --diff
 ```bash
 npx excavate --json
 ```
+
+---
+
+## What is new in v1.0.4
+
+- CHANGELOG.md added to track release history
+- Publish workflow added for consistent releases
+- Fixed complexity scoring: per-function cyclomatic complexity replaces file-level aggregate
+- Fixed `--diff` and `--diff-only` to compare against the immediately preceding run, not oldest baseline
+- Shared git client across scanners to reduce process spawning overhead
+- Path normalization fix for orphan scanner module sources
 
 ---
 
