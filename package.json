@@ -46,7 +46,8 @@
     "templates",
     "README.md",
     "LICENSE",
-    "llms.txt"
+    "llms.txt",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsc --project tsconfig.build.json && chmod +x dist/cli.js",

@@ -9,7 +9,6 @@ excavate-report/
 .agents/
 .claude/
 .gstack/
-.windsurf/
 docs/
 AGENTS.md
 CLAUDE.md
