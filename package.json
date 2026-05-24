@@ -52,6 +52,7 @@
     "build": "tsc --project tsconfig.build.json && chmod +x dist/cli.js",
     "dev": "tsx watch src/cli.ts",
     "start": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist",
     "test": "vitest run",
@@ -85,41 +86,5 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "excavate": {
-    "include": [
-      "src/**/*.ts",
-      "src/**/*.tsx",
-      "src/**/*.js",
-      "src/**/*.jsx"
-    ],
-    "exclude": [
-      "**/*.test.ts",
-      "**/*.spec.ts",
-      "**/*.test.js",
-      "**/*.spec.js",
-      "**/node_modules/**",
-      "**/dist/**",
-      "**/.git/**"
-    ],
-    "weights": {
-      "churn": 0.25,
-      "coverage": 0.25,
-      "complexity": 0.2,
-      "knowledge": 0.15,
-      "docs": 0.1,
-      "deps": 0.05
-    },
-    "thresholds": {
-      "bedrock": 70,
-      "deep": 40,
-      "surface": 20
-    },
-    "output": [
-      "terminal"
-    ],
-    "reportDir": "./excavate-report",
-    "failAbove": null,
-    "gitDays": 90
   }
 }

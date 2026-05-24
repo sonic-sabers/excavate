@@ -1,0 +1,35 @@
+{
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/*.d.ts"
+  ],
+  "weights": {
+    "churn":      0.30,
+    "coverage":   0.20,
+    "complexity": 0.30,
+    "knowledge":  0.05,
+    "docs":       0.05,
+    "deps":       0.10
+  },
+  "thresholds": {
+    "bedrock": 70,
+    "deep":    40,
+    "surface": 20
+  },
+  "gitDays": 90,
+  "coupling": {
+    "enabled":   true,
+    "threshold": 40
+  },
+  "orphans": {
+    "enabled": true,
+    "minLOC":  10
+  }
+}
