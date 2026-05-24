@@ -73,7 +73,7 @@ Requires `gh` CLI (`brew install gh`):
 ```bash
 gh release create v<NEW_VERSION> \
   --title "v<NEW_VERSION>" \
-  --notes-file CHANGELOG.md
+  --notes "$(awk '/^## v<NEW_VERSION>/{found=1; next} found && /^---/{exit} found{print}' CHANGELOG.md)"
 ```
 
 If `gh` is not installed: https://github.com/sonic-sabers/excavate/releases/new — select tag `v<NEW_VERSION>` and paste the new section from `CHANGELOG.md` as the release body.
