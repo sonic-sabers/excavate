@@ -1,14 +1,16 @@
 import { simpleGit } from 'simple-git'
+import type { SimpleGitClient } from './gitScanner.js'
 
 export async function buildCouplingMatrix(
   repoRoot: string,
   files: string[],
   gitDays: number,
   threshold: number,
+  gitClient?: SimpleGitClient,
 ): Promise<Map<string, Array<{ file: string; pct: number }>>> {
-  let git: ReturnType<typeof simpleGit>
+  let git: SimpleGitClient
   try {
-    git = simpleGit(repoRoot)
+    git = gitClient ?? simpleGit(repoRoot)
   } catch {
     return new Map(files.map((f) => [f, []]))
   }

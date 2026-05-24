@@ -22,10 +22,11 @@ export function detectOrphans(
     );
     if (!hasNoDependants) continue;
 
-    const loc = locMap.get(mod.source) ?? 0;
+    const normalizedSource = mod.source.replace(/^\.\//, '')
+    const loc = locMap.get(normalizedSource) ?? locMap.get(mod.source) ?? 0;
     if (loc < minLOC) continue;
 
-    orphanFiles.push(mod.source);
+    orphanFiles.push(normalizedSource);
   }
 
   const deadExports = orphanFiles.length > 0 ? runKnip(repoRoot) : new Map<string, number>();

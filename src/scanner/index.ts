@@ -2,6 +2,7 @@ import { glob } from "glob";
 import pLimit from "p-limit";
 import ora from "ora";
 import path from "path";
+import { simpleGit } from "simple-git";
 import { computeScore, assignLevel } from "../scorer/score.js";
 import { classifyArchetype } from "../scorer/archetype.js";
 import { computeHealthGrade } from "../scorer/healthGrade.js";
@@ -61,6 +62,9 @@ export async function scan(
     }
   }
 
+  // One shared simpleGit client — avoids spawning a new instance per file
+  const git = simpleGit(repoRoot);
+
   // Temporal coupling matrix — run once over all files
   let couplingMatrix = new Map<string, Array<{ file: string; pct: number }>>();
   if (config.coupling.enabled) {
@@ -70,6 +74,7 @@ export async function scan(
         files,
         config.gitDays,
         config.coupling.threshold,
+        git,
       );
     } catch {
       // coupling scan failed — proceed without
@@ -84,8 +89,8 @@ export async function scan(
   const results: FileDebtResult[] = await Promise.all(
     files.map((filePath) =>
       limit(async (): Promise<FileDebtResult> => {
-        const [git, ast, doc] = await Promise.all([
-          scanGit(filePath, repoRoot, config),
+        const [gitResult, ast, doc] = await Promise.all([
+          scanGit(filePath, repoRoot, config, git),
           scanAst(filePath, repoRoot),
           scanDoc(filePath, repoRoot, config),
         ]);
@@ -99,10 +104,10 @@ export async function scan(
         const temporalCoupling = couplingMatrix.get(filePath) ?? [];
 
         const signals: FileDebtResult["signals"] = {
-          churn: git.churnScore,
+          churn: gitResult.churnScore,
           coverage: coverageScore,
           complexity: ast.complexityScore,
-          knowledge: git.knowledgeScore,
+          knowledge: gitResult.knowledgeScore,
           docs: doc.docsScore,
           deps: depsScore,
         };
@@ -116,13 +121,13 @@ export async function scan(
           level,
           signals,
           meta: {
-            lastModified: git.lastModified,
-            authors: git.authors,
-            recentAuthors: git.recentAuthors,
-            knowledgeCliff: git.knowledgeCliff,
-            commitCount: git.commitCount,
-            refactorCount: git.refactorCount,
-            survivalPct: git.survivalPct,
+            lastModified: gitResult.lastModified,
+            authors: gitResult.authors,
+            recentAuthors: gitResult.recentAuthors,
+            knowledgeCliff: gitResult.knowledgeCliff,
+            commitCount: gitResult.commitCount,
+            refactorCount: gitResult.refactorCount,
+            survivalPct: gitResult.survivalPct,
             testCoverage: coverageMissing ? 0 : 100 - coverageScore,
             linesOfCode: ast.linesOfCode,
             satdCount: doc.satdCount,

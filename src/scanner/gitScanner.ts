@@ -1,6 +1,8 @@
 import { simpleGit } from 'simple-git'
 import type { ExcavateConfig } from '../types.js'
 
+export type SimpleGitClient = ReturnType<typeof simpleGit>
+
 export interface GitScanResult {
   churnScore: number
   knowledgeScore: number
@@ -17,8 +19,9 @@ export async function scanGit(
   filePath: string,
   repoRoot: string,
   config: ExcavateConfig,
+  gitClient?: SimpleGitClient,
 ): Promise<GitScanResult> {
-  const git = simpleGit(repoRoot)
+  const git = gitClient ?? simpleGit(repoRoot)
 
   const [recentLog, allLog, shortlog, recentShortlog] = await Promise.all([
     git.log({ file: filePath, '--since': `${config.gitDays}.days` }),
