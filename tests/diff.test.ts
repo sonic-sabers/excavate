@@ -129,4 +129,36 @@ describe('computeDiff', () => {
     // new files have no previous — not in regressions or improvements
     expect(diff.regressions).toHaveLength(0)
   })
+
+  it('diff with empty previous and empty current produces no regressions', () => {
+    const before = makeScan([])
+    const after  = makeScan([])
+    const diff = computeDiff(before, after)
+    expect(diff.regressions).toHaveLength(0)
+    expect(diff.improvements).toHaveLength(0)
+    expect(diff.newBedrock).toHaveLength(0)
+    expect(diff.resolved).toHaveLength(0)
+  })
+
+  it('healthGrade trend is degrading when current score drops by more than 3', () => {
+    const before = makeScan([{ path: 'src/a.ts', score: 10, level: 'clear' }])
+    const after  = makeScan([
+      { path: 'src/a.ts', score: 75, level: 'bedrock' },
+      { path: 'src/b.ts', score: 80, level: 'bedrock' },
+      { path: 'src/c.ts', score: 80, level: 'bedrock' },
+    ])
+    const diff = computeDiff(before, after)
+    expect(diff.healthGrade.current.trend).toBe('degrading')
+  })
+
+  it('healthGrade trend is improving when current score rises by more than 3', () => {
+    const before = makeScan([
+      { path: 'src/a.ts', score: 80, level: 'bedrock' },
+      { path: 'src/b.ts', score: 80, level: 'bedrock' },
+      { path: 'src/c.ts', score: 80, level: 'bedrock' },
+    ])
+    const after = makeScan([{ path: 'src/a.ts', score: 10, level: 'clear' }])
+    const diff = computeDiff(before, after)
+    expect(diff.healthGrade.current.trend).toBe('improving')
+  })
 })

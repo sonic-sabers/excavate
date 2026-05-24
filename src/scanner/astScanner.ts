@@ -21,7 +21,45 @@ const DECISION_NODES = new Set([
   'CatchClause',
 ])
 
-function walkAndCount(node: unknown, count: { value: number }): void {
+const FUNCTION_NODES = new Set([
+  'FunctionDeclaration',
+  'FunctionExpression',
+  'ArrowFunctionExpression',
+  'MethodDefinition',
+])
+
+// Returns max cyclomatic complexity across all functions in the AST.
+// Each function starts at 1 and gains +1 per decision node inside it.
+function maxFunctionComplexity(node: unknown): number {
+  if (!node || typeof node !== 'object') return 0
+  const obj = node as Record<string, unknown>
+  let max = 0
+
+  if (typeof obj['type'] === 'string' && FUNCTION_NODES.has(obj['type'])) {
+    const count = { value: 0 }
+    countDecisions(obj, count)
+    const cyclomatic = 1 + count.value
+    if (cyclomatic > max) max = cyclomatic
+  }
+
+  for (const key of Object.keys(obj)) {
+    if (key === 'parent') continue
+    const child = obj[key]
+    if (Array.isArray(child)) {
+      for (const item of child) {
+        const m = maxFunctionComplexity(item)
+        if (m > max) max = m
+      }
+    } else if (child && typeof child === 'object') {
+      const m = maxFunctionComplexity(child)
+      if (m > max) max = m
+    }
+  }
+
+  return max
+}
+
+function countDecisions(node: unknown, count: { value: number }): void {
   if (!node || typeof node !== 'object') return
   const obj = node as Record<string, unknown>
 
@@ -33,9 +71,9 @@ function walkAndCount(node: unknown, count: { value: number }): void {
     if (key === 'parent') continue
     const child = obj[key]
     if (Array.isArray(child)) {
-      for (const item of child) walkAndCount(item, count)
+      for (const item of child) countDecisions(item, count)
     } else if (child && typeof child === 'object') {
-      walkAndCount(child, count)
+      countDecisions(child, count)
     }
   }
 }
@@ -74,12 +112,11 @@ export async function scanAst(
     return { complexityScore: 0, linesOfCode }
   }
 
-  const count = { value: 0 }
-  walkAndCount(ast, count)
-
-  // cyclomatic = 1 + decision points; normalise: 1→0, 20+→100
-  const cyclomatic = 1 + count.value
-  const complexityScore = Math.min((cyclomatic - 1) / 19, 1) * 100
+  // Max cyclomatic complexity across all functions: 1→0, 20→50, 40+→100
+  // Industry baseline: >10 = high, >20 = very high, >40 = extreme.
+  // Files with no functions (type declarations, constants) score 0.
+  const maxComplexity = maxFunctionComplexity(ast)
+  const complexityScore = maxComplexity <= 1 ? 0 : Math.min((maxComplexity - 1) / 39, 1) * 100
 
   return { complexityScore, linesOfCode }
 }

@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
 import type { ScanResult } from "../src/types.js";
-import { saveSnapshot, loadBase, loadHistory } from "../src/history.js";
+import { saveSnapshot, loadBase, loadPrevious, loadHistory } from "../src/history.js";
 
 function makeScan(avgScore: number, date: Date): ScanResult {
   return {
@@ -18,6 +18,12 @@ function makeScan(avgScore: number, date: Date): ScanResult {
       surface: 0,
       clear: 1,
       estimatedHours: 0,
+      healthGrade: { score: 100, grade: 'A' },
+      orphanFiles: 0,
+      orphanLOC: 0,
+      temporallyCoupledPairs: 0,
+      knowledgeCliffFiles: 0,
+      narrative: '',
     },
     files: [],
   };
@@ -36,6 +42,41 @@ afterEach(async () => {
 describe("loadBase", () => {
   it("returns null when history dir missing", async () => {
     expect(await loadBase(dir)).toBeNull();
+  });
+});
+
+describe("loadPrevious", () => {
+  it("returns null when history dir missing", async () => {
+    expect(await loadPrevious(dir)).toBeNull();
+  });
+
+  it("returns null when only one snapshot exists", async () => {
+    const a = makeScan(50, new Date("2026-01-01T00:00:00Z"));
+    await saveSnapshot(a, dir, 30);
+    expect(await loadPrevious(dir)).toBeNull();
+  });
+
+  it("returns second-to-last snapshot when two exist", async () => {
+    const a = makeScan(50, new Date("2026-01-01T00:00:00Z"));
+    const b = makeScan(40, new Date("2026-01-02T00:00:00Z"));
+    await saveSnapshot(a, dir, 30);
+    await saveSnapshot(b, dir, 30);
+    const prev = await loadPrevious(dir);
+    expect(prev).not.toBeNull();
+    expect(prev!.summary.avgScore).toBe(50);
+  });
+
+  it("loadBase and loadPrevious return different snapshots", async () => {
+    const a = makeScan(10, new Date("2026-01-01T00:00:00Z"));
+    const b = makeScan(20, new Date("2026-01-02T00:00:00Z"));
+    const c = makeScan(30, new Date("2026-01-03T00:00:00Z"));
+    await saveSnapshot(a, dir, 30);
+    await saveSnapshot(b, dir, 30);
+    await saveSnapshot(c, dir, 30);
+    const base = await loadBase(dir);
+    const prev = await loadPrevious(dir);
+    expect(base!.summary.avgScore).toBe(10);  // oldest
+    expect(prev!.summary.avgScore).toBe(20);  // second-to-last
   });
 });
 

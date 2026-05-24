@@ -42,4 +42,21 @@ describe('scanDeps', () => {
     const { fileMap } = await scanDeps(FIXTURE)
     expect(fileMap.has('__repo__')).toBe(true)
   })
+
+  it('fileMap keys are relative paths without leading ./ or absolute prefix', async () => {
+    const { fileMap } = await scanDeps(FIXTURE)
+    for (const key of fileMap.keys()) {
+      if (key === '__repo__') continue
+      expect(key).not.toMatch(/^\//)        // not absolute
+      expect(key).not.toMatch(/^\.\//)      // not ./relative
+    }
+  })
+
+  it('cruiseResult mod.source values are normalized relative paths', async () => {
+    const { cruiseResult } = await scanDeps(FIXTURE)
+    if (!cruiseResult) return
+    for (const mod of cruiseResult.modules) {
+      expect(mod.source).not.toMatch(/^\//)   // not absolute
+    }
+  })
 })
