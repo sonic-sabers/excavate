@@ -51,6 +51,17 @@ export async function loadBase(reportDir: string): Promise<ScanResult | null> {
   return JSON.parse(raw) as ScanResult
 }
 
+// Returns the snapshot immediately before the most recent one — used by --diff.
+// After saveSnapshot, the current run is all[last], so "previous" is all[last - 1].
+// Returns null if fewer than 2 snapshots exist.
+export async function loadPrevious(reportDir: string): Promise<ScanResult | null> {
+  const dir = historyDir(reportDir)
+  const all = await listSorted(dir)
+  if (all.length < 2) return null
+  const raw = await readFile(path.join(dir, all[all.length - 2]!), 'utf8')
+  return JSON.parse(raw) as ScanResult
+}
+
 export async function loadHistory(reportDir: string): Promise<ScanResult[]> {
   const dir = historyDir(reportDir)
   const all = await listSorted(dir)

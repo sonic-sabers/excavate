@@ -7,7 +7,7 @@ import { createRequire } from 'module'
 import { loadConfig } from './scorer/weights.js'
 import { scan } from './scanner/index.js'
 import { printLogo, printResults } from './output/terminal.js'
-import { saveSnapshot, loadBase, loadHistory } from './history.js'
+import { saveSnapshot, loadBase, loadPrevious, loadHistory } from './history.js'
 import type { ScanResult } from './types.js'
 
 const require = createRequire(import.meta.url)
@@ -27,8 +27,8 @@ program
   .option('--json', 'Shorthand for --output json')
   .option('--top <n>', 'Show only top N worst files')
   .option('--since <days>', 'Git history window in days')
-  .option('--diff', 'Compare to last scan (.excavate/last-scan.json)')
-  .option('--diff-only', 'Show only changed files (implies --diff)')
+  .option('--diff', 'Compare to the immediately preceding scan in history/')
+  .option('--diff-only', 'Show only the diff vs preceding scan; exits with error if no prior scan exists')
   .option('--narrative', 'Print plain-English summary to stdout')
   .option('--orphans', 'Show orphan files section in terminal output')
   .option('--no-open', 'Do not auto-open HTML report in browser')
@@ -86,14 +86,16 @@ program
     const result = await scan(repoRoot, config, spinner)
     spinner.stop()
 
-    // History: save snapshot, load base + full history for outputs
-    let base: ScanResult | null = null
+    // History: save snapshot, then load previous run (for diff) + full history (for HTML trend)
+    let previous: ScanResult | null = null  // second-to-last snapshot — used by --diff
+    let base: ScanResult | null = null      // oldest snapshot — used by HTML trend chart
     let history: ScanResult[] = []
     if (config.history) {
       try {
         await saveSnapshot(result, config.reportDir, config.historyLimit)
-        base    = await loadBase(config.reportDir)
-        history = await loadHistory(config.reportDir)
+        previous = await loadPrevious(config.reportDir)
+        base     = await loadBase(config.reportDir)
+        history  = await loadHistory(config.reportDir)
       } catch {
         console.warn('  warning: could not save scan history')
       }
@@ -109,18 +111,22 @@ program
       console.log()
     }
 
-    if (opts.diffOnly && base) {
+    if (opts.diffOnly) {
+      if (!previous) {
+        console.error('  error: --diff-only requires a prior scan in history. Run without --diff-only first.')
+        process.exit(1)
+      }
       const { computeDiff, printDiff } = await import('./output/diffOutput.js')
-      const diff = computeDiff(base, result)
+      const diff = computeDiff(previous, result)
       printDiff(diff)
     } else {
       if (config.output.includes('terminal')) {
         printResults(result, top, base, showOrphans)
       }
 
-      if (showDiff && base) {
+      if (showDiff && previous) {
         const { computeDiff, printDiff } = await import('./output/diffOutput.js')
-        const diff = computeDiff(base, result)
+        const diff = computeDiff(previous, result)
         printDiff(diff)
       }
     }
