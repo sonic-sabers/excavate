@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/excavate.svg)](https://www.npmjs.com/package/excavate)
 [![npm downloads](https://img.shields.io/npm/dm/excavate.svg)](https://www.npmjs.com/package/excavate)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](package.json)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20.12-brightgreen.svg)](package.json)
 
 **Excavate is a zero-config technical debt scanner for JavaScript and TypeScript codebases.**
 
@@ -15,7 +15,7 @@ npx excavate
 
 No account. No server. No setup. Your code stays local.
 
-> Requires Node.js 18+ and a git repository.
+> Requires Node.js 20.12+ and a git repository.
 
 ---
 
@@ -187,7 +187,7 @@ Excavate works best with:
 
 Requirements:
 
-- Node.js 18+
+- Node.js 20.12+
 - A git repository
 - JS or TS source files
 
@@ -284,6 +284,15 @@ npx excavate --diff
 ```bash
 npx excavate --json
 ```
+
+---
+
+## What is new in v1.1.0
+
+- `excavate explain <file>` subcommand — per-file archetype and playbook, no API key required
+- `excavate blame` subcommand — ownership report listing sole authors and knowledge cliff warnings for every bedrock file
+- God-file detection via `godFileScanner`: classifies export kinds (component, hook, function, constant, type, class) and surfaces `concernCount` per file
+- `--interactive` flag — arrow-key drill-down after the heatmap, auto-activates on TTY
 
 ---
 
@@ -552,9 +561,51 @@ Options:
   --narrative             Print plain-English repo summary to stdout
   --orphans               Show orphan files in terminal output
   --no-open               Do not auto-open HTML report in browser
+  --interactive           Drop into arrow-key file browser after heatmap (auto on TTY)
   -v, --version           Show version
   -h, --help              Show help
 ```
+
+---
+
+## Subcommands
+
+### `excavate explain <file>`
+
+Per-file debt breakdown. No API key required.
+
+```bash
+npx excavate explain src/auth/session.ts
+```
+
+Prints:
+- Debt level + score
+- Archetype name and summary (e.g. "The Time Bomb")
+- Signal bars (churn, coverage, complexity, knowledge, docs, deps)
+- Temporal coupling partners
+- 3 prioritised recommended actions
+
+Set `ANTHROPIC_API_KEY` for deeper analysis with specific line references (coming in a future release).
+
+### `excavate blame`
+
+Ownership report for all bedrock files.
+
+```bash
+npx excavate blame
+```
+
+Shows the most recent committer per bedrock file, sole-author warnings, and knowledge cliff flags.
+
+### `--interactive`
+
+Arrow-key file browser after the heatmap. Auto-activates when stdout is a TTY.
+
+```bash
+npx excavate --interactive
+```
+
+Navigate with ↑↓, press Enter to inspect a file, open in `$EDITOR` if set.
 
 ---
 
