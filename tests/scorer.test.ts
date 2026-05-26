@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeScore, assignLevel } from '../src/scorer/score.js'
+import { computeScore, assignLevel, applyGodFilePenalty } from '../src/scorer/score.js'
 import { DEFAULT_CONFIG } from '../src/types.js'
 
 const W = DEFAULT_CONFIG.weights
@@ -36,4 +36,22 @@ describe('assignLevel', () => {
   it('20 → surface', () => expect(assignLevel(20, T)).toBe('surface'))
   it('19 → clear',   () => expect(assignLevel(19, T)).toBe('clear'))
   it('0  → clear',   () => expect(assignLevel(0,  T)).toBe('clear'))
+})
+
+describe('applyGodFilePenalty', () => {
+  it('returns score unchanged when concernCount <= 2', () => {
+    expect(applyGodFilePenalty(50, 0)).toBe(50)
+    expect(applyGodFilePenalty(50, 1)).toBe(50)
+    expect(applyGodFilePenalty(50, 2)).toBe(50)
+  })
+
+  it('adds +10 per concern above 2', () => {
+    expect(applyGodFilePenalty(50, 3)).toBe(60)
+    expect(applyGodFilePenalty(50, 4)).toBe(70)
+    expect(applyGodFilePenalty(50, 5)).toBe(80)
+  })
+
+  it('clamps to 100', () => {
+    expect(applyGodFilePenalty(90, 5)).toBe(100)
+  })
 })
