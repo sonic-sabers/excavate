@@ -3,7 +3,7 @@ import pLimit from "p-limit";
 import ora from "ora";
 import path from "path";
 import { simpleGit } from "simple-git";
-import { computeScore, assignLevel } from "../scorer/score.js";
+import { computeScore, assignLevel, applyGodFilePenalty } from "../scorer/score.js";
 import { classifyArchetype } from "../scorer/archetype.js";
 import { computeHealthGrade } from "../scorer/healthGrade.js";
 import { generateNarrative } from "../scorer/narrative.js";
@@ -19,6 +19,7 @@ import { scanDoc } from "./docScanner.js";
 import { scanDeps } from "./depScanner.js";
 import { buildCouplingMatrix } from "./couplingScanner.js";
 import { detectOrphans } from "./orphanScanner.js";
+import { scanGodFiles } from "./godFileScanner.js";
 
 export async function scan(
   repoRoot: string,
@@ -81,6 +82,9 @@ export async function scan(
     }
   }
 
+  // God-file scan — run once over all files, results stamped per-file below
+  const godFileMap = await scanGodFiles(files, repoRoot);
+
   // Per-file scans — p-limit for concurrency control
   const limit = pLimit(50);
   let completed = 0;
@@ -112,7 +116,10 @@ export async function scan(
           deps: depsScore,
         };
 
-        const score = computeScore(signals, weights);
+        const godData = godFileMap.get(filePath) ?? { exportKinds: [], concernCount: 0 };
+
+        const rawScore = computeScore(signals, weights);
+        const score    = applyGodFilePenalty(rawScore, godData.concernCount);
         const level = assignLevel(score, config.thresholds);
 
         const partial: Omit<FileDebtResult, "archetype"> = {
@@ -136,8 +143,8 @@ export async function scan(
             temporalCoupling,
             isOrphan: false,
             deadExports: 0,
-            concernCount: 0,
-            exportKinds: [],
+            concernCount: godData.concernCount,
+            exportKinds: godData.exportKinds,
           },
         };
 

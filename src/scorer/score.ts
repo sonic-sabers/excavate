@@ -21,3 +21,8 @@ export function computeScore(
 
   return Math.round(Math.min(Math.max(raw, 0), 100))
 }
+
+export function applyGodFilePenalty(score: number, concernCount: number): number {
+  const penalty = Math.max(0, concernCount - 2) * 10
+  return Math.min(100, score + penalty)
+}

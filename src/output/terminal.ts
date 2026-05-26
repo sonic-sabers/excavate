@@ -1,4 +1,6 @@
 import chalk from 'chalk'
+import { select, isCancel } from '@clack/prompts'
+import { execFileSync } from 'child_process'
 import { type FileDebtResult, type ScanResult, type DebtArchetype } from '../types.js'
 import { ARCHETYPE_LABELS } from '../scorer/archetype.js'
 
@@ -178,4 +180,56 @@ export function printResults(result: ScanResult, top?: number, base?: ScanResult
   }
 
   console.log()
+}
+
+export async function runInteractive(result: ScanResult): Promise<void> {
+  const candidates = result.files
+    .filter((f) => f.level !== 'clear')
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 50)
+
+  if (candidates.length === 0) {
+    console.log(chalk.green('  no non-clear files to inspect'))
+    return
+  }
+
+  const choices = [
+    ...candidates.map((f) => ({
+      value: f.path,
+      label: `${f.level.toUpperCase().padEnd(8)}  ${f.path.padEnd(55)}  ${f.score}`,
+    })),
+    { value: '__quit__', label: 'quit' },
+  ]
+
+  while (true) {
+    const selected = await select({
+      message: 'Select a file to inspect (↑↓ navigate, Enter select)',
+      options: choices,
+    })
+
+    if (isCancel(selected) || selected === '__quit__') break
+
+    const fileResult = result.files.find((f) => f.path === selected)
+    if (!fileResult) continue
+
+    const { explainFile } = await import('../commands/explain.js')
+    explainFile(selected as string, fileResult)
+
+    if (process.env['EDITOR']) {
+      const openChoice = await select({
+        message: 'Open in $EDITOR?',
+        options: [
+          { value: 'yes', label: `yes — open ${selected} in ${process.env['EDITOR']}` },
+          { value: 'no',  label: 'no — back to list' },
+        ],
+      })
+      if (!isCancel(openChoice) && openChoice === 'yes') {
+        try {
+          execFileSync(process.env['EDITOR']!, [selected as string], { stdio: 'inherit' })
+        } catch {
+          console.log(chalk.dim('  could not open editor'))
+        }
+      }
+    }
+  }
 }

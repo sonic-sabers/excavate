@@ -32,6 +32,7 @@ program
   .option('--narrative', 'Print plain-English summary to stdout')
   .option('--orphans', 'Show orphan files section in terminal output')
   .option('--no-open', 'Do not auto-open HTML report in browser')
+  .option('--interactive', 'Drop into arrow-key file browser after heatmap')
   .action(async (scanPath: string, opts: {
     output: string
     report?: boolean
@@ -47,6 +48,7 @@ program
     narrative?: boolean
     orphans?: boolean
     open: boolean
+    interactive?: boolean
   }) => {
     if (!opts.color) {
       chalk.level = 0
@@ -124,6 +126,11 @@ program
         printResults(result, top, base, showOrphans)
       }
 
+      if ((opts.interactive ?? process.stdout.isTTY) && config.output.includes('terminal')) {
+        const { runInteractive } = await import('./output/terminal.js')
+        await runInteractive(result)
+      }
+
       if (showDiff && previous) {
         const { computeDiff, printDiff } = await import('./output/diffOutput.js')
         const diff = computeDiff(previous, result)
@@ -154,6 +161,51 @@ program
     if (config.failAbove !== null && result.summary.avgScore >= config.failAbove) {
       process.exit(1)
     }
+  })
+
+program
+  .command('explain <file>')
+  .description('Per-file archetype breakdown and recommended actions')
+  .option('--config <path>', 'Config file path')
+  .option('--since <days>', 'Git history window in days')
+  .action(async (filePath: string, opts: { config?: string; since?: string }) => {
+    const repoRoot = path.resolve('.')
+    const config   = await loadConfig(opts.config)
+    if (opts.since) config.gitDays = parseInt(opts.since, 10)
+
+    const spinner = ora('Scanning…').start()
+    const result  = await scan(repoRoot, config, spinner)
+    spinner.stop()
+
+    const normalised = path.normalize(filePath).replace(/\\/g, '/').replace(/^\.\//, '')
+    const fileResult = result.files.find((f) => f.path === normalised)
+
+    if (!fileResult) {
+      console.error(`  error: file not found in scan results: ${filePath}`)
+      console.error(`  tip: path must be relative to repo root (e.g. src/cli.ts)`)
+      process.exit(1)
+    }
+
+    const { explainFile } = await import('./commands/explain.js')
+    explainFile(normalised, fileResult)
+  })
+
+program
+  .command('blame')
+  .description('Ownership report for all bedrock files')
+  .option('--config <path>', 'Config file path')
+  .option('--since <days>', 'Git history window in days')
+  .action(async (opts: { config?: string; since?: string }) => {
+    const repoRoot = path.resolve('.')
+    const config   = await loadConfig(opts.config)
+    if (opts.since) config.gitDays = parseInt(opts.since, 10)
+
+    const spinner = ora('Scanning…').start()
+    const result  = await scan(repoRoot, config, spinner)
+    spinner.stop()
+
+    const { runBlame } = await import('./commands/blame.js')
+    runBlame(result)
   })
 
 program
