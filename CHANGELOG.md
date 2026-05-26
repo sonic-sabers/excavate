@@ -4,6 +4,16 @@ All notable changes to excavate are documented here.
 
 ---
 
+## v1.1.0
+
+- `excavate explain <file>` subcommand — per-file archetype and playbook, no API key required
+- `excavate blame` subcommand — ownership report listing sole authors and knowledge cliff warnings for every bedrock file
+- `--interactive` flag — browse flagged files with arrow keys and open your $EDITOR directly
+- God-file scanner — detects bedrock files (central exports like utils, constants, types) and applies debt penalties when they show risk signals
+- Export kind classification — function, constant, class, interface, type, enum
+
+---
+
 ## v1.0.4
 
 - `CHANGELOG.md` added to track release history

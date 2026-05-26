@@ -109,7 +109,7 @@ npx excavate --since 30
 
 ```txt
   ████
-  ███          Excavate v1.0.4
+  ███          Excavate v1.1.0
   ██
   █            your codebase, laid bare
 
@@ -579,6 +579,7 @@ npx excavate explain src/auth/session.ts
 ```
 
 Prints:
+
 - Debt level + score
 - Archetype name and summary (e.g. "The Time Bomb")
 - Signal bars (churn, coverage, complexity, knowledge, docs, deps)
