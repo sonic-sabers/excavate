@@ -77,7 +77,7 @@ export function printHealthGrade(result: ScanResult): void {
   console.log(`  health grade   ${gradeStr}   ${chalk.dim(scoreStr)}${trendStr}`)
 }
 
-export function printResults(result: ScanResult, top?: number, base?: ScanResult | null, showOrphans = false): void {
+export function printResults(result: ScanResult, top?: number, base?: ScanResult | null): void {
   const { summary } = result
 
   // Health grade header
@@ -86,10 +86,7 @@ export function printResults(result: ScanResult, top?: number, base?: ScanResult
     console.log()
   }
 
-  const nonOrphans = result.files.filter((f) => !f.meta.isOrphan)
-  const orphans = result.files.filter((f) => f.meta.isOrphan)
-
-  const displayFiles = top ? nonOrphans.slice(0, top) : nonOrphans
+  const displayFiles = top ? result.files.slice(0, top) : result.files
 
   const maxPathLen = Math.min(
     55,
@@ -108,19 +105,6 @@ export function printResults(result: ScanResult, top?: number, base?: ScanResult
     console.log(
       `  ${colorize(label)}  ${chalk.dim(filePath)}  ${chalk.bold(score)}${arch}${signalStr}`,
     )
-  }
-
-  // Orphans section
-  if (showOrphans && orphans.length > 0) {
-    console.log()
-    const orphanLOC = orphans.reduce((sum, f) => sum + f.meta.linesOfCode, 0)
-    console.log(chalk.dim(`  ORPHANS (${orphans.length} files, ${orphanLOC} lines — nothing imports these)`))
-    for (const file of orphans) {
-      const score = String(file.score).padStart(3)
-      const filePath = pad(file.path, maxPathLen)
-      const deadStr = file.meta.deadExports > 0 ? chalk.dim(`   dead exports: ${file.meta.deadExports}`) : ''
-      console.log(`  ${chalk.dim('GHOST   ')}  ${chalk.dim(filePath)}  ${score}${deadStr}`)
-    }
   }
 
   const div = chalk.dim('  ' + '─'.repeat(60))

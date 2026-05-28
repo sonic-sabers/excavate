@@ -149,7 +149,6 @@ program
     }
 
     const top = opts.top ? parseInt(opts.top, 10) : undefined
-    const showOrphans = opts.orphans ?? false
     const showDiff = opts.diff ?? opts.diffOnly ?? false
 
     if (opts.narrative) {
@@ -168,7 +167,7 @@ program
       printDiff(diff)
     } else {
       if (config.output.includes('terminal')) {
-        printResults(result, top, base, showOrphans)
+        printResults(result, top, base)
       }
 
       if (opts.interactive === true) {

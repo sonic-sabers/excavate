@@ -632,6 +632,27 @@
         opacity: 1;
         transform: translate(0, -50%);
       }
+      .signal-info.header-info::after,
+      .signal-info.header-info::before {
+        display: none;
+      }
+      .header-tip-popover {
+        position: fixed;
+        z-index: 9999;
+        max-width: min(280px, calc(100vw - 24px));
+        padding: 9px 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #15171a;
+        color: #fff;
+        box-shadow: var(--shadow-soft);
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 11px;
+        font-weight: 560;
+        line-height: 1.42;
+        text-transform: none;
+        pointer-events: none;
+      }
       .signal-bar-wrap {
         height: 8px;
         overflow: hidden;
@@ -675,6 +696,26 @@
         overflow-x: auto;
         border: 1px solid var(--line);
         border-radius: 10px;
+      }
+      .list-controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 10px;
+      }
+      .orphan-section .list-controls {
+        padding: 0 2px 2px;
+      }
+      .list-count {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 620;
+      }
+      .list-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
       }
       table {
         width: 100%;
@@ -789,6 +830,13 @@
         padding: 26px;
         color: var(--quiet);
         text-align: center;
+      }
+      .orphan-table:empty + .list-controls,
+      .orphan-section.is-empty .list-controls {
+        justify-content: flex-start;
+      }
+      .orphan-section.is-empty .list-actions {
+        display: none;
       }
       .panel-drawer {
         display: none;
@@ -1416,8 +1464,7 @@
             <div class="panel-head">
               <div class="panel-title">
                 <span class="mini-icon">TR</span>
-                <div><h2>Score over time</h2><p>See whether the codebase is
-                    improving</p></div>
+                <div><h2>Health over time</h2><p>Higher is better (100 = best)</p></div>
               </div>
               <div class="legend"><span><i
                     class="dot"
@@ -1511,6 +1558,13 @@
               <tbody id="table-body"></tbody>
             </table>
           </div>
+          <div class="list-controls">
+            <div class="list-count" id="file-list-count"></div>
+            <div class="list-actions">
+              <button class="action" type="button" id="file-list-less" style="display:none">Show less</button>
+              <button class="action" type="button" id="file-list-more" style="display:none">Show more</button>
+            </div>
+          </div>
         </section>
       </main>
 
@@ -1542,6 +1596,13 @@
             </thead>
             <tbody id="orphan-table-body"></tbody>
           </table>
+        </div>
+        <div class="list-controls">
+          <div class="list-count" id="orphan-list-count"></div>
+          <div class="list-actions">
+            <button class="action" type="button" id="orphan-list-less" style="display:none">Show less</button>
+            <button class="action" type="button" id="orphan-list-more" style="display:none">Show more</button>
+          </div>
         </div>
       </section>
 
@@ -1612,6 +1673,10 @@ const filterInput = document.getElementById('file-filter');
 let mode = 'latest';
 let sortKey = 'score';
 let sortAsc = false;
+const FILE_PAGE_SIZE = 25;
+const ORPHAN_PAGE_SIZE = 12;
+let visibleFileRows = FILE_PAGE_SIZE;
+let visibleOrphanRows = ORPHAN_PAGE_SIZE;
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -1623,6 +1688,10 @@ function scoreTone(score) {
   if (score >= 20) return COLORS.surface;
   return COLORS.clear;
 }
+function toHealthScore(debtScore) {
+  const raw = 100 - Number(debtScore || 0);
+  return Math.max(0, Math.min(100, Math.round(raw)));
+}
 function basename(filePath) { return filePath.split('/').pop() || filePath; }
 function boolLabel(value) { return value ? 'yes' : 'no'; }
 function listLabel(values) {
@@ -1633,6 +1702,11 @@ function strongestCoupling(file) {
   if (!couples.length) return '—';
   const strongest = [...couples].sort((a, b) => b.pct - a.pct)[0];
   return strongest.pct + '% with ' + basename(strongest.file);
+}
+function archetypeTableLabel(file) {
+  const value = typeof file.archetype === 'string' ? file.archetype.trim() : '';
+  if (!value || value === 'healthy') return 'Healthy';
+  return ARCHETYPE_LABELS[value] || value || 'Unclassified';
 }
 function topSignalNames(file) {
   return SIGNALS
@@ -1833,7 +1907,7 @@ function renderTrend() {
   const svg = document.getElementById('trend');
   while (svg.firstChild) svg.removeChild(svg.firstChild);
   const cmp = getCompareSnapshot();
-  const snapshots = HISTORY.length >= 2 ? HISTORY : [DATA, DATA];
+  const snapshots = (HISTORY.length >= 1 ? HISTORY : [DATA]).slice(-10);
   svg.setAttribute('viewBox', '0 0 640 214');
   const pad = { t: 18, r: 20, b: 30, l: 36 };
   const width = 640 - pad.l - pad.r;
@@ -1850,13 +1924,14 @@ function renderTrend() {
     svg.appendChild(line);
   });
   const dangerBand = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  dangerBand.setAttribute('x', pad.l); dangerBand.setAttribute('y', yScale(100));
-  dangerBand.setAttribute('width', width); dangerBand.setAttribute('height', yScale(70) - yScale(100));
+  dangerBand.setAttribute('x', pad.l); dangerBand.setAttribute('y', yScale(30));
+  dangerBand.setAttribute('width', width); dangerBand.setAttribute('height', yScale(0) - yScale(30));
   dangerBand.setAttribute('fill', 'rgba(228,63,63,0.06)');
   svg.appendChild(dangerBand);
   // If in compare mode, draw baseline as dashed line
   if (cmp) {
-    const cmpY = yScale(cmp.summary.avgScore);
+    const cmpHealth = toHealthScore(cmp.summary.avgScore);
+    const cmpY = yScale(cmpHealth);
     const cmpLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     cmpLine.setAttribute('x1', pad.l); cmpLine.setAttribute('x2', pad.l + width);
     cmpLine.setAttribute('y1', cmpY); cmpLine.setAttribute('y2', cmpY);
@@ -1866,10 +1941,10 @@ function renderTrend() {
     const cmpLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     cmpLabel.setAttribute('x', pad.l + width - 2); cmpLabel.setAttribute('y', cmpY - 4);
     cmpLabel.setAttribute('text-anchor', 'end'); cmpLabel.setAttribute('fill', '#d89019');
-    cmpLabel.setAttribute('font-size', '10'); cmpLabel.textContent = 'baseline ' + cmp.summary.avgScore;
+    cmpLabel.setAttribute('font-size', '10'); cmpLabel.textContent = 'baseline ' + cmpHealth;
     svg.appendChild(cmpLabel);
   }
-  const areaPoints = snapshots.map((snapshot, i) => xScale(i) + ',' + yScale(snapshot.summary.avgScore));
+  const areaPoints = snapshots.map((snapshot, i) => xScale(i) + ',' + yScale(toHealthScore(snapshot.summary.avgScore)));
   const area = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   area.setAttribute('d', 'M' + areaPoints.join(' L') + ' L' + xScale(snapshots.length - 1) + ',' + (pad.t + height) + ' L' + pad.l + ',' + (pad.t + height) + ' Z');
   area.setAttribute('fill', 'rgba(38,131,216,0.10)');
@@ -1881,7 +1956,7 @@ function renderTrend() {
   polyline.setAttribute('stroke-linejoin', 'round');
   svg.appendChild(polyline);
   snapshots.forEach((snapshot, i) => {
-    const cx = xScale(i); const cy = yScale(snapshot.summary.avgScore);
+    const cx = xScale(i); const cy = yScale(toHealthScore(snapshot.summary.avgScore));
     const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     circle.setAttribute('cx', cx); circle.setAttribute('cy', cy);
     circle.setAttribute('r', '4'); circle.setAttribute('fill', '#fff');
@@ -1954,7 +2029,7 @@ function renderTreemap() {
     rect.setAttribute('rx', '8'); rect.setAttribute('fill', levelColor(file.level));
     rect.setAttribute('tabindex', '0'); rect.setAttribute('role', 'button');
     const archetypeStr = file.archetype && file.archetype !== 'healthy' ? ', ' + (ARCHETYPE_LABELS[file.archetype] || file.archetype) : '';
-    rect.setAttribute('aria-label', file.path + ', score ' + file.score + ', ' + file.level + archetypeStr);
+    rect.setAttribute('aria-label', file.path + ', health ' + toHealthScore(file.score) + ', ' + file.level + archetypeStr);
     rect.style.animation = 'excavate-in 0.3s ease both';
     rect.style.animationDelay = ((LEVEL_ANIM_ORDER[file.level] ?? 3) * 200) + 'ms';
     rect.onclick = () => openPanel(file);
@@ -1967,7 +2042,10 @@ function renderTreemap() {
       label = label.length > Math.floor(w / 7) ? label.slice(0, Math.max(Math.floor(w / 7) - 1, 2)) + '…' : label;
       if (cmpMap && w > 100 && h > 38) {
         const before = cmpMap.get(file.path);
-        if (before) { const delta = file.score - before.score; if (delta !== 0) label += ' ' + (delta > 0 ? '+' : '') + delta; }
+        if (before) {
+          const delta = toHealthScore(file.score) - toHealthScore(before.score);
+          if (delta !== 0) label += ' ' + (delta > 0 ? '+' : '') + delta;
+        }
       }
       text.textContent = label;
       group.appendChild(text);
@@ -1998,7 +2076,7 @@ function openPanelByPath(encodedPath) {
 }
 function openPanel(file) {
   document.getElementById('panel-title').textContent = file.path;
-  document.getElementById('panel-score').textContent = file.score;
+  document.getElementById('panel-score').textContent = toHealthScore(file.score);
   document.getElementById('panel-score').style.color = levelColor(file.level);
   const archetypeName = file.archetype && file.archetype !== 'healthy' ? (ARCHETYPE_LABELS[file.archetype] || file.archetype) : '';
   document.getElementById('panel-level').textContent = file.level.toUpperCase() + ' · ' + (file.meta.linesOfCode || 0) + ' LOC · ' + file.meta.commitCount + ' commits';
@@ -2017,10 +2095,10 @@ function openPanel(file) {
   const existingDelta = document.getElementById('panel-score-delta');
   if (existingDelta) existingDelta.remove();
   if (cmpFile) {
-    const delta = file.score - cmpFile.score;
+    const delta = toHealthScore(file.score) - toHealthScore(cmpFile.score);
     const deltaEl = document.createElement('span');
     deltaEl.id = 'panel-score-delta';
-    deltaEl.className = 'delta ' + (delta > 0 ? 'bad' : delta < 0 ? 'good' : 'neutral');
+    deltaEl.className = 'delta ' + (delta > 0 ? 'good' : delta < 0 ? 'bad' : 'neutral');
     deltaEl.style.cssText = 'margin-left:10px;font-size:16px;vertical-align:middle';
     deltaEl.textContent = (delta > 0 ? '+' : '') + delta + ' vs ' + (mode === 'base' ? 'base' : 'last');
     document.getElementById('panel-score').insertAdjacentElement('afterend', deltaEl);
@@ -2076,28 +2154,36 @@ function renderTable() {
   const cmpMap = cmp ? new Map(cmp.files.map((file) => [file.path, file])) : null;
   const showDelta = cmpMap !== null;
   const filter = filterInput.value.trim().toLowerCase();
+  const columnTips = {
+    archetype: 'Debt archetype is the dominant code-health pattern in a file (for example: The Ghost, Spaghetti, or Time Bomb).',
+  };
   const columns = [
-    ['path', 'File'], ['level', 'Level'], ['score', 'Score'], ['archetype', 'Archetype'],
-    ...(showDelta ? [['delta', 'Δ Score']] : []),
+    ['path', 'File'], ['level', 'Level'], ['score', 'Health'],
+    ['recentAuthors', 'Recent authors'], ['refactorCount', 'Refactors'], ['temporalCoupling', 'Temporal coupling'],
+    ['archetype', 'Archetype'],
+    ...(showDelta ? [['delta', 'Δ Health']] : []),
     ['churn', 'Churn'], ['coverage', 'Coverage gap'], ['complexity', 'Complexity'],
     ['knowledge', 'Knowledge risk'], ['docs', 'Docs'], ['deps', 'Deps'],
-    ['survivalPct', 'Survival %'], ['recentAuthors', 'Recent authors'], ['knowledgeCliff', 'Cliff'],
-    ['refactorCount', 'Refactors'], ['temporalCoupling', 'Temporal coupling'],
+    ['survivalPct', 'Survival %'], ['knowledgeCliff', 'Cliff'],
     ['isOrphan', 'Orphan'], ['deadExports', 'Dead exports'],
     ['action', ''],
   ];
   document.getElementById('table-head').innerHTML = '<tr>' + columns.map((column) => {
     if (column[0] === 'action') return '<th class="action-cell" aria-label="Actions"></th>';
-    return '<th onclick="sortBy(\'' + column[0] + '\')">' + column[1] + (sortKey === column[0] ? (sortAsc ? ' ↑' : ' ↓') : '') + '</th>';
+    const tip = columnTips[column[0]]
+      ? '<span class="signal-info header-info" tabindex="0" data-tip="' + escapeHtml(columnTips[column[0]]) + '" title="' + escapeHtml(columnTips[column[0]]) + '" aria-label="' + escapeHtml(columnTips[column[0]]) + '" onclick="event.stopPropagation()">i</span>'
+      : '';
+    const label = '<span style="display:inline-flex;align-items:center;gap:6px">' + column[1] + tip + '</span>';
+    return '<th onclick="sortBy(\'' + column[0] + '\')">' + label + (sortKey === column[0] ? (sortAsc ? ' ↑' : ' ↓') : '') + '</th>';
   }).join('') + '</tr>';
   const files = [...DATA.files].filter((file) => !filter || file.path.toLowerCase().includes(filter)).sort((a, b) => {
     let av, bv;
     if (sortKey === 'path') { av = a.path; bv = b.path; }
     else if (sortKey === 'level') { av = LEVEL_RANK[a.level]; bv = LEVEL_RANK[b.level]; }
-    else if (sortKey === 'score') { av = a.score; bv = b.score; }
+    else if (sortKey === 'score') { av = toHealthScore(a.score); bv = toHealthScore(b.score); }
     else if (sortKey === 'delta' && cmpMap) {
-      av = a.score - (cmpMap.get(a.path) ? cmpMap.get(a.path).score : a.score);
-      bv = b.score - (cmpMap.get(b.path) ? cmpMap.get(b.path).score : b.score);
+      av = toHealthScore(a.score) - toHealthScore(cmpMap.get(a.path) ? cmpMap.get(a.path).score : a.score);
+      bv = toHealthScore(b.score) - toHealthScore(cmpMap.get(b.path) ? cmpMap.get(b.path).score : b.score);
     } else if (sortKey === 'survivalPct') { av = a.meta.survivalPct || 0; bv = b.meta.survivalPct || 0; }
     else if (sortKey === 'recentAuthors') { av = (a.meta.recentAuthors || []).length; bv = (b.meta.recentAuthors || []).length; }
     else if (sortKey === 'knowledgeCliff') { av = a.meta.knowledgeCliff ? 1 : 0; bv = b.meta.knowledgeCliff ? 1 : 0; }
@@ -2112,26 +2198,36 @@ function renderTable() {
   });
   if (files.length === 0) {
     document.getElementById('table-body').innerHTML = '<tr><td class="empty-row" colspan="' + columns.length + '">No files match this filter.</td></tr>';
+    const fileCountEl = document.getElementById('file-list-count');
+    if (fileCountEl) fileCountEl.textContent = 'Showing 0 of 0 files';
+    const fileMore = document.getElementById('file-list-more');
+    const fileLess = document.getElementById('file-list-less');
+    if (fileMore) fileMore.style.display = 'none';
+    if (fileLess) fileLess.style.display = 'none';
     return;
   }
-  document.getElementById('table-body').innerHTML = files.map((file) => {
+  const visibleFiles = files.slice(0, visibleFileRows);
+  document.getElementById('table-body').innerHTML = visibleFiles.map((file) => {
     let deltaCell = '';
     if (showDelta) {
       const before = cmpMap.get(file.path);
       if (!before) {
         deltaCell = '<td class="delta-pos">new</td>';
       } else {
-        const delta = file.score - before.score;
+        const delta = toHealthScore(file.score) - toHealthScore(before.score);
         if (delta === 0) deltaCell = '<td class="delta-neu">stable</td>';
-        else if (delta > 0) deltaCell = '<td class="delta-pos">+' + delta + '</td>';
-        else deltaCell = '<td class="delta-neg">' + delta + '</td>';
+        else if (delta > 0) deltaCell = '<td class="delta-neg">+' + delta + '</td>';
+        else deltaCell = '<td class="delta-pos">' + delta + '</td>';
       }
     }
     return '<tr onclick="openPanelByPath(\'' + encodeURIComponent(file.path) + '\')" style="cursor:pointer">' +
       '<td class="file-cell">' + escapeHtml(file.path) + '</td>' +
       '<td><span class="level-pill" style="background:' + levelColor(file.level) + '">' + file.level + '</span></td>' +
-      '<td style="color:var(--ink);font-weight:850">' + file.score + '</td>' +
-      '<td style="color:var(--muted);font-size:11px">' + (file.archetype && file.archetype !== 'healthy' ? escapeHtml(ARCHETYPE_LABELS[file.archetype] || file.archetype) : '') + '</td>' +
+      '<td style="color:var(--ink);font-weight:850">' + toHealthScore(file.score) + '</td>' +
+      '<td>' + escapeHtml(listLabel(file.meta.recentAuthors)) + '</td>' +
+      '<td>' + (file.meta.refactorCount || 0) + '</td>' +
+      '<td>' + escapeHtml(strongestCoupling(file)) + '</td>' +
+      '<td style="color:var(--muted);font-size:11px;font-weight:700">' + escapeHtml(archetypeTableLabel(file)) + '</td>' +
       deltaCell +
       '<td>' + Math.round(file.signals.churn) + '</td>' +
       '<td>' + Math.round(file.signals.coverage) + '</td>' +
@@ -2140,15 +2236,18 @@ function renderTable() {
       '<td>' + Math.round(file.signals.docs) + '</td>' +
       '<td>' + Math.round(file.signals.deps) + '</td>' +
       '<td>' + (file.meta.survivalPct || 0) + '%</td>' +
-      '<td>' + escapeHtml(listLabel(file.meta.recentAuthors)) + '</td>' +
       '<td>' + boolLabel(file.meta.knowledgeCliff) + '</td>' +
-      '<td>' + (file.meta.refactorCount || 0) + '</td>' +
-      '<td>' + escapeHtml(strongestCoupling(file)) + '</td>' +
       '<td>' + boolLabel(file.meta.isOrphan) + '</td>' +
       '<td>' + (file.meta.deadExports || 0) + '</td>' +
       '<td class="action-cell"><button type="button" class="view-btn" onclick="event.stopPropagation(); openPanelByPath(\'' + encodeURIComponent(file.path) + '\')">View</button></td>' +
       '</tr>';
   }).join('');
+  const fileCountEl = document.getElementById('file-list-count');
+  if (fileCountEl) fileCountEl.textContent = 'Showing ' + visibleFiles.length + ' of ' + files.length + ' files';
+  const fileMore = document.getElementById('file-list-more');
+  const fileLess = document.getElementById('file-list-less');
+  if (fileMore) fileMore.style.display = visibleFiles.length < files.length ? 'inline-flex' : 'none';
+  if (fileLess) fileLess.style.display = visibleFiles.length > FILE_PAGE_SIZE ? 'inline-flex' : 'none';
 }
 function sortBy(key) {
   if (sortKey === key) sortAsc = !sortAsc;
@@ -2169,17 +2268,33 @@ function renderNarrative() {
   el.innerHTML = raw.split('\n\n').filter(Boolean).map((p) => '<p>' + escapeHtml(p.trim()) + '</p>').join('');
 }
 function renderOrphans() {
-  const orphans = DATA.files.filter((f) => f.meta.isOrphan);
+  const orphans = DATA.files.filter((f) => {
+    const meta = f.meta || {};
+    return Boolean(meta.isOrphan) || f.archetype === 'ghost' || (meta.deadExports || 0) > 0;
+  });
   const section = document.getElementById('orphan-section');
   if (!section) return;
-  if (!orphans.length) { section.style.display = 'none'; return; }
   section.style.display = 'block';
   const totalLOC = orphans.reduce((s, f) => s + (f.meta.linesOfCode || 0), 0);
   const badge = document.getElementById('orphan-badge');
   if (badge) badge.textContent = orphans.length + ' files · ' + totalLOC + ' lines';
   const tbody = document.getElementById('orphan-table-body');
   if (!tbody) return;
-  tbody.innerHTML = orphans.sort((a, b) => (b.meta.linesOfCode || 0) - (a.meta.linesOfCode || 0)).map((file) => {
+  if (!orphans.length) {
+    section.classList.add('is-empty');
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-row">No orphan files detected in this report.</td></tr>';
+    const orphanCount = document.getElementById('orphan-list-count');
+    if (orphanCount) orphanCount.textContent = 'Showing 0 of 0 orphan files';
+    const orphanMore = document.getElementById('orphan-list-more');
+    const orphanLess = document.getElementById('orphan-list-less');
+    if (orphanMore) orphanMore.style.display = 'none';
+    if (orphanLess) orphanLess.style.display = 'none';
+    return;
+  }
+  section.classList.remove('is-empty');
+  const sortedOrphans = orphans.sort((a, b) => (b.meta.linesOfCode || 0) - (a.meta.linesOfCode || 0));
+  const visibleOrphans = sortedOrphans.slice(0, visibleOrphanRows);
+  tbody.innerHTML = visibleOrphans.map((file) => {
     return '<tr onclick="openPanelByPath(\'' + encodeURIComponent(file.path) + '\')">' +
       '<td class="orphan-file-cell">' + escapeHtml(file.path) + '</td>' +
       '<td style="color:' + levelColor(file.level) + ';font-weight:800">' + file.score + '</td>' +
@@ -2188,8 +2303,73 @@ function renderOrphans() {
       '<td>' + (file.meta.deadExports > 0 ? file.meta.deadExports + ' unused' : '<span style="color:var(--quiet)">—</span>') + '</td>' +
       '</tr>';
   }).join('');
+  const orphanCount = document.getElementById('orphan-list-count');
+  if (orphanCount) orphanCount.textContent = 'Showing ' + visibleOrphans.length + ' of ' + sortedOrphans.length + ' orphan files';
+  const orphanMore = document.getElementById('orphan-list-more');
+  const orphanLess = document.getElementById('orphan-list-less');
+  if (orphanMore) orphanMore.style.display = visibleOrphans.length < sortedOrphans.length ? 'inline-flex' : 'none';
+  if (orphanLess) orphanLess.style.display = visibleOrphans.length > ORPHAN_PAGE_SIZE ? 'inline-flex' : 'none';
 }
-filterInput.addEventListener('input', renderTable);
+filterInput.addEventListener('input', () => {
+  visibleFileRows = FILE_PAGE_SIZE;
+  renderTable();
+});
+document.getElementById('file-list-more').addEventListener('click', () => {
+  visibleFileRows += FILE_PAGE_SIZE;
+  renderTable();
+});
+document.getElementById('file-list-less').addEventListener('click', () => {
+  visibleFileRows = FILE_PAGE_SIZE;
+  renderTable();
+});
+document.getElementById('orphan-list-more').addEventListener('click', () => {
+  visibleOrphanRows += ORPHAN_PAGE_SIZE;
+  renderOrphans();
+});
+document.getElementById('orphan-list-less').addEventListener('click', () => {
+  visibleOrphanRows = ORPHAN_PAGE_SIZE;
+  renderOrphans();
+});
+let headerTooltipEl = null;
+function hideHeaderTooltip() {
+  if (headerTooltipEl) {
+    headerTooltipEl.remove();
+    headerTooltipEl = null;
+  }
+}
+function showHeaderTooltip(target) {
+  hideHeaderTooltip();
+  const tip = target && target.getAttribute('data-tip');
+  if (!tip) return;
+  const pop = document.createElement('div');
+  pop.className = 'header-tip-popover';
+  pop.textContent = tip;
+  document.body.appendChild(pop);
+  const rect = target.getBoundingClientRect();
+  const popRect = pop.getBoundingClientRect();
+  const gap = 8;
+  let left = rect.left + (rect.width / 2) - (popRect.width / 2);
+  left = Math.max(10, Math.min(left, window.innerWidth - popRect.width - 10));
+  let top = rect.bottom + gap;
+  if (top + popRect.height > window.innerHeight - 8) top = rect.top - popRect.height - gap;
+  pop.style.left = Math.round(left) + 'px';
+  pop.style.top = Math.round(Math.max(8, top)) + 'px';
+  headerTooltipEl = pop;
+}
+document.addEventListener('mouseover', (event) => {
+  const target = event.target && event.target.closest ? event.target.closest('.signal-info.header-info') : null;
+  if (target) showHeaderTooltip(target);
+  else hideHeaderTooltip();
+});
+document.addEventListener('focusin', (event) => {
+  const target = event.target && event.target.matches && event.target.matches('.signal-info.header-info') ? event.target : null;
+  if (target) showHeaderTooltip(target);
+});
+document.addEventListener('focusout', (event) => {
+  const target = event.target && event.target.matches && event.target.matches('.signal-info.header-info');
+  if (target) hideHeaderTooltip();
+});
+window.addEventListener('scroll', hideHeaderTooltip, true);
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closePanel(); });
 window.addEventListener('resize', () => { renderTreemap(); });
 setupHistoryControls();

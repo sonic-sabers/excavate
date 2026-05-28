@@ -110,15 +110,45 @@ async function countRefactors(
     ])
 
     let count = 0
+    let additionsInCommit = 0
+    let deletionsInCommit = 0
+
+    const finalizeCommit = () => {
+      const touched = additionsInCommit + deletionsInCommit
+      const hasBoth = additionsInCommit > 0 && deletionsInCommit > 0
+      const meaningfulMixedChange = hasBoth && touched >= 4
+      const balancedRewrite =
+        meaningfulMixedChange &&
+        touched >= 8 &&
+        (
+          (deletionsInCommit >= additionsInCommit * 0.5 &&
+            additionsInCommit >= deletionsInCommit * 0.5) ||
+          (Math.min(additionsInCommit, deletionsInCommit) >= 4)
+        )
+      const deleteHeavyRewrite =
+        hasBoth &&
+        deletionsInCommit > additionsInCommit * 1.5
+
+      if (meaningfulMixedChange || balancedRewrite || deleteHeavyRewrite) count++
+      additionsInCommit = 0
+      deletionsInCommit = 0
+    }
+
     for (const line of log.split('\n')) {
-      if (line.startsWith('COMMIT') || !line.trim()) continue
+      if (line.startsWith('COMMIT')) {
+        finalizeCommit()
+        continue
+      }
+      if (!line.trim()) continue
       const parts = line.split('\t')
       const additions = parseInt(parts[0] ?? '', 10)
       const deletions = parseInt(parts[1] ?? '', 10)
-      if (!isNaN(additions) && !isNaN(deletions) && deletions > additions * 1.5) {
-        count++
+      if (!isNaN(additions) && !isNaN(deletions)) {
+        additionsInCommit += additions
+        deletionsInCommit += deletions
       }
     }
+    finalizeCommit()
     return count
   } catch {
     return 0

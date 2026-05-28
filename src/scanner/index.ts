@@ -179,9 +179,17 @@ export async function scan(
         )
         .catch(() => ({}) as Record<string, unknown>),
     );
+    function collectExportPaths(exp: unknown): string[] {
+      if (typeof exp === "string") return [exp];
+      if (exp && typeof exp === "object") {
+        return Object.values(exp).flatMap(collectExportPaths);
+      }
+      return [];
+    }
+
     const rawEntryPoints = [
       pkgJson.main,
-      ...(typeof pkgJson.exports === "string" ? [pkgJson.exports] : []),
+      ...collectExportPaths(pkgJson.exports),
       ...(typeof pkgJson.bin === "string"
         ? [pkgJson.bin]
         : (Object.values(pkgJson.bin ?? {}) as string[])),
