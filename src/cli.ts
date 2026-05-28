@@ -13,6 +13,45 @@ import type { ScanResult } from './types.js'
 const require = createRequire(import.meta.url)
 const pkg = require('../package.json') as { version: string }
 
+// Re-exec with latest version if npx cache is stale. Skip if already re-execed or in CI.
+const inCI = Boolean(process.env['CI'] || process.env['GITHUB_ACTIONS'] || process.env['CI_SERVER'] || process.env['CONTINUOUS_INTEGRATION'])
+if (!process.env['EXCAVATE_SKIP_UPDATE_CHECK'] && !inCI) {
+  try {
+    const { default: https } = await import('https')
+    const latest = await new Promise<string>((resolve, reject) => {
+      const req = https.get(
+        'https://registry.npmjs.org/excavate/latest',
+        { headers: { Accept: 'application/json' }, timeout: 2000 },
+        (res) => {
+          let data = ''
+          res.on('data', (chunk: Buffer) => { data += chunk })
+          res.on('end', () => {
+            try { resolve((JSON.parse(data) as { version: string }).version) }
+            catch { reject(new Error('parse failed')) }
+          })
+        }
+      )
+      req.on('error', reject)
+      req.on('timeout', () => { req.destroy(); reject(new Error('timeout')) })
+    })
+
+    if (latest !== pkg.version) {
+      const { execFileSync } = await import('child_process')
+      execFileSync(
+        'npx',
+        [`excavate@${latest}`, ...process.argv.slice(2)],
+        {
+          stdio: 'inherit',
+          env: { ...process.env, EXCAVATE_SKIP_UPDATE_CHECK: '1' },
+        }
+      )
+      process.exit(0)
+    }
+  } catch {
+    // registry unreachable or offline — continue with cached version
+  }
+}
+
 program
   .name('excavate')
   .description('Dig up what is buried in your codebase.')
@@ -66,7 +105,13 @@ program
     } else if (opts.json) {
       config.output = ['json']
     } else {
-      config.output = opts.output.split(',').filter(Boolean) as typeof config.output
+      const explicit = opts.output.split(',').filter(Boolean) as typeof config.output
+      config.output = explicit
+      // default bare run (no --output flag) gets html added; explicit --output lists respected as-is
+      const isDefault = opts.output === 'terminal'
+      if (isDefault && !config.output.includes('html')) {
+        config.output = [...config.output, 'html']
+      }
     }
 
     if (opts.reportDir) {
@@ -126,7 +171,7 @@ program
         printResults(result, top, base, showOrphans)
       }
 
-      if ((opts.interactive ?? process.stdout.isTTY) && config.output.includes('terminal')) {
+      if (opts.interactive === true) {
         const { runInteractive } = await import('./output/terminal.js')
         await runInteractive(result)
       }
