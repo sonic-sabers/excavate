@@ -4,6 +4,14 @@ All notable changes to excavate are documented here.
 
 ---
 
+## v1.1.1
+
+- Auto-update handoff for stale `npx` cache: CLI checks npm registry and re-execs latest `excavate@<version>` with a recursion guard
+- Update check now skips in common CI environments to avoid network-dependent CI startup behavior
+- Default run output now includes HTML report generation while preserving explicit output format lists
+
+---
+
 ## v1.1.0
 
 - `excavate explain <file>` subcommand — per-file archetype and playbook, no API key required

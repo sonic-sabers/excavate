@@ -109,7 +109,7 @@ npx excavate --since 30
 
 ```txt
   ████
-  ███          Excavate v1.1.0
+  ███          Excavate v1.1.1
   ██
   █            your codebase, laid bare
 
@@ -284,6 +284,14 @@ npx excavate --diff
 ```bash
 npx excavate --json
 ```
+
+---
+
+## What is new in v1.1.1
+
+- Auto-update handoff for stale `npx` cache: CLI checks npm registry and re-execs latest `excavate@<version>` with a recursion guard
+- Update check now skips in common CI environments to avoid network-dependent CI startup behavior
+- Default run output now includes HTML report generation while preserving explicit output format lists
 
 ---
 
