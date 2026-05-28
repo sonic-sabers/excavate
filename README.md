@@ -133,7 +133,7 @@ npx excavate@latest --since 30
 
 ```txt
   ████
-  ███          Excavate v1.1.1
+  ███          Excavate v1.1.2
   ██
   █            your codebase, laid bare
 
@@ -308,6 +308,15 @@ npx excavate@latest --diff
 ```bash
 npx excavate@latest --json
 ```
+
+---
+
+## What is new in v1.1.2
+
+- Improved orphan detection by correctly traversing object-form `package.json` `exports` entries
+- Enhanced terminal and HTML reporting for orphan visibility and healthier archetype labeling
+- Added pagination and tooltip improvements in the HTML report for large tables
+- Updated docs and usage guidance to consistently use `npx excavate@latest`
 
 ---
 

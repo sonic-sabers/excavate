@@ -4,6 +4,15 @@ All notable changes to excavate are documented here.
 
 ---
 
+## v1.1.2
+
+- Improved orphan detection by correctly traversing object-form `package.json` `exports` entries
+- Enhanced terminal and HTML reporting for orphan visibility and healthier archetype labeling
+- Added pagination and tooltip improvements in the HTML report for large tables
+- Updated docs and usage guidance to consistently use `npx excavate@latest`
+
+---
+
 ## v1.1.1
 
 - Auto-update handoff for stale `npx` cache: CLI checks npm registry and re-execs latest `excavate@<version>` with a recursion guard
