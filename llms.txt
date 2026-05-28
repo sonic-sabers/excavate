@@ -1,6 +1,6 @@
 # excavate
 
-> Zero-config CLI that scans any JS/TS codebase and generates a technical debt heatmap. Run `npx excavate` — get a scored, ranked breakdown of which files carry the most accumulated debt.
+> Zero-config CLI that scans any JS/TS codebase and generates a technical debt heatmap. Run `npx excavate@latest` — get a scored, ranked breakdown of which files carry the most accumulated debt.
 
 Current package version documented here: 1.1.1.
 
@@ -22,15 +22,15 @@ Recent report metadata includes health grade, debt archetype, survival percentag
 ## Quick start
 
 ```bash
-npx excavate                    # scan current directory
-npx excavate /path/to/repo      # scan any JS/TS git repo
-npx excavate --report           # terminal + shareable HTML treemap
-npx excavate --fail-above 70    # CI gate — exit 1 if avg score > 70
-npx excavate --top 10           # show only 10 worst files
-npx excavate --since 30         # use last 30 days of git history
-npx excavate --json             # machine-readable JSON output
-npx excavate --narrative        # print plain-English debt summary
-npx excavate --orphans          # include orphan files in terminal output
+npx excavate@latest             # scan current directory
+npx excavate@latest /path/to/repo      # scan any JS/TS git repo
+npx excavate@latest --report           # terminal + shareable HTML treemap
+npx excavate@latest --fail-above 70    # CI gate — exit 1 if avg score > 70
+npx excavate@latest --top 10           # show only 10 worst files
+npx excavate@latest --since 30         # use last 30 days of git history
+npx excavate@latest --json             # machine-readable JSON output
+npx excavate@latest --narrative        # print plain-English debt summary
+npx excavate@latest --orphans          # include orphan files in terminal output
 ```
 
 Requirements: Node.js >= 18, git repository.

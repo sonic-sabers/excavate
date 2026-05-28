@@ -10,7 +10,29 @@
 It analyzes git history, code complexity, coverage gaps, ownership risk, temporal coupling, orphan files, dead exports, and dependency signals to show which files are most risky to change.
 
 ```bash
-npx excavate
+# run instantly, no install needed
+npx excavate@latest
+```
+
+Or install it in your project once and use `npm run excavate` anytime:
+
+```bash
+npm install excavate
+```
+
+Then open your `package.json` and add `"excavate": "excavate"` inside the `scripts` block:
+
+```json
+"scripts": {
+  ...other scripts,
+  "excavate": "excavate",   ← add this line
+}
+```
+
+Now just run:
+
+```bash
+npm run excavate
 ```
 
 No account. No server. No setup. Your code stays local.
@@ -64,8 +86,10 @@ Excavate combines multiple engineering signals into one ranked technical debt sc
 Run Excavate instantly in any JS or TS git repository:
 
 ```bash
-npx excavate
+npx excavate@latest
 ```
+
+> Use `@latest` to always get the newest version. Plain `npx excavate` may use a cached older release.
 
 Or install it globally:
 
@@ -82,25 +106,25 @@ excavate
 Scan a specific path:
 
 ```bash
-npx excavate /path/to/repo
+npx excavate@latest /path/to/repo
 ```
 
 Generate a shareable HTML report:
 
 ```bash
-npx excavate --report
+npx excavate@latest --report
 ```
 
 Show only the worst 10 files:
 
 ```bash
-npx excavate --top 10
+npx excavate@latest --top 10
 ```
 
 Scan only recent git history:
 
 ```bash
-npx excavate --since 30
+npx excavate@latest --since 30
 ```
 
 ---
@@ -200,7 +224,7 @@ Coverage is optional. If no coverage report is found, Excavate skips that signal
 Pass `--report` to generate a self-contained HTML report:
 
 ```bash
-npx excavate --report
+npx excavate@latest --report
 ```
 
 Then open:
@@ -240,49 +264,49 @@ No server is required. The report is generated locally and can be shared with yo
 ### Find the worst files in a repo
 
 ```bash
-npx excavate --top 10
+npx excavate@latest --top 10
 ```
 
 ### Generate an HTML report
 
 ```bash
-npx excavate --report
+npx excavate@latest --report
 ```
 
 ### Fail CI if technical debt is too high
 
 ```bash
-npx excavate --fail-above 70 --json
+npx excavate@latest --fail-above 70 --json
 ```
 
 ### Scan only the last 30 days of git history
 
 ```bash
-npx excavate --since 30
+npx excavate@latest --since 30
 ```
 
 ### Show orphan files in terminal output
 
 ```bash
-npx excavate --orphans
+npx excavate@latest --orphans
 ```
 
 ### Print a plain-English repo summary
 
 ```bash
-npx excavate --narrative
+npx excavate@latest --narrative
 ```
 
 ### Compare against the previous scan
 
 ```bash
-npx excavate --diff
+npx excavate@latest --diff
 ```
 
 ### Output machine-readable JSON
 
 ```bash
-npx excavate --json
+npx excavate@latest --json
 ```
 
 ---
@@ -481,7 +505,7 @@ See [sonic-sabers/excavate-action](https://github.com/sonic-sabers/excavate-acti
 Use `--fail-above` to fail a CI pipeline when the average technical debt score exceeds your threshold.
 
 ```bash
-npx excavate --fail-above 70 --json
+npx excavate@latest --fail-above 70 --json
 ```
 
 Excavate exits with code `1` if the average score across scanned files exceeds the threshold.
@@ -611,7 +635,7 @@ Shows the most recent committer per bedrock file, sole-author warnings, and know
 Arrow-key file browser after the heatmap. Auto-activates when stdout is a TTY.
 
 ```bash
-npx excavate --interactive
+npx excavate@latest --interactive
 ```
 
 Navigate with ↑↓, press Enter to inspect a file, open in `$EDITOR` if set.
@@ -752,7 +776,7 @@ No.
 Run:
 
 ```bash
-npx excavate
+npx excavate@latest
 ```
 
 That is enough for most JS and TS git repositories.
@@ -776,7 +800,7 @@ Yes.
 Pass the path to the package you want to scan:
 
 ```bash
-npx excavate packages/api
+npx excavate@latest packages/api
 ```
 
 ### Does it work with Jest?
@@ -804,7 +828,7 @@ Yes.
 Use:
 
 ```bash
-npx excavate --fail-above 70 --json
+npx excavate@latest --fail-above 70 --json
 ```
 
 ### Can I share the report?
@@ -814,7 +838,7 @@ Yes.
 Run:
 
 ```bash
-npx excavate --report
+npx excavate@latest --report
 ```
 
 The generated HTML report is self-contained and can be shared with your team.

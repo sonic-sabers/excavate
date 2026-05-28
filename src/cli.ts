@@ -206,6 +206,16 @@ program
     if (config.failAbove !== null && result.summary.avgScore >= config.failAbove) {
       process.exit(1)
     }
+
+    // hint only when running via npx (not locally installed)
+    const isNpx = !process.env['npm_execpath']?.includes('node_modules/.bin/npm')
+      && (process.env['npm_execpath']?.includes('npx') || !process.env['npm_lifecycle_script'])
+    const isInstalledLocally = await import('fs').then(({ existsSync }) =>
+      existsSync(new URL('../../../.bin/excavate', import.meta.url))
+    ).catch(() => false)
+    if (isNpx && !isInstalledLocally && !inCI) {
+      console.log(chalk.dim('\n  tip: run npm i excavate to install permanently and use npm run excavate'))
+    }
   })
 
 program
